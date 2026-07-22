@@ -122,6 +122,11 @@ export function getSidebarNavigation(
             href: "/school-admin",
             icon: LayoutDashboard,
           },
+          {
+            label: "CBT",
+            href: "/school-admin/cbt",
+            icon: GraduationCap,
+          },
 
           {
             label: "Academic Setup",
