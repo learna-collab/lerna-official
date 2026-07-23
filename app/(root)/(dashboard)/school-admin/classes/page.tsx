@@ -146,8 +146,8 @@ export default function ClassesPage() {
       toast.success("Class deleted");
 
       await loadClasses();
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.log(error?.data?.response);
 
       toast.error("Failed to delete class");
     }
