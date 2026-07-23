@@ -53,7 +53,7 @@ export default function ExamInformation({ exam }: ExamInformationProps) {
             <InfoRow
               icon={<GraduationCap className="h-4 w-4" />}
               label="Class"
-              value={exam.class?.name ?? "-"}
+              value={exam.school_class?.name ?? "-"}
             />
 
             <InfoRow
