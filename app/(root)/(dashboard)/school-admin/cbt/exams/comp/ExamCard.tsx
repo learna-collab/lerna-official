@@ -18,8 +18,8 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 
-import ExamActions from "./ExamActions";
-import ExamStatusBadge from "./ExamStatusBadge";
+import ExamActions from "../components/ExamActions";
+import ExamStatusBadge from "../components/ExamStatusBadge";
 
 interface ExamCardProps {
   exam: Exam;
