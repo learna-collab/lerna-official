@@ -2,7 +2,7 @@
 
 import { Exam } from "@/app/types/cbt";
 
-import ExamCard from "./ExamCard";
+import ExamCard from "../comp/ExamCard";
 import EmptyState from "./EmptyState";
 
 interface ExamGridProps {
