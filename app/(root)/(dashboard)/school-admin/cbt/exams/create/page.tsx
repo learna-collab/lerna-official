@@ -371,7 +371,10 @@ export default function CreateExamPage() {
                           type="number"
                           min={1}
                           placeholder="60"
-                          {...field}
+                          value={field.value}
+                          onChange={(e) =>
+                            field.onChange(e.target.valueAsNumber)
+                          }
                         />
                       </FormControl>
 
@@ -392,7 +395,10 @@ export default function CreateExamPage() {
                           type="number"
                           min={1}
                           placeholder="100"
-                          {...field}
+                          value={field.value}
+                          onChange={(e) =>
+                            field.onChange(e.target.valueAsNumber)
+                          }
                         />
                       </FormControl>
 

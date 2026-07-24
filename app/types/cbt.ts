@@ -83,6 +83,13 @@ export interface Exam {
   questions?: Question[];
 }
 
+export interface StudentInfo {
+  id: string;
+  first_name: string;
+  last_name: string;
+  admission_number?: string;
+}
+
 export interface Attempt {
   id: string;
 
@@ -95,6 +102,12 @@ export interface Attempt {
   score: number;
   percentage: number;
   passed: boolean;
+
+  student?: StudentInfo;
+
+  answered_questions?: number;
+
+  exam?: Exam;
 }
 
 export interface Answer {
@@ -150,4 +163,60 @@ export interface AttemptListApiResponse extends ApiResponse {
 
 export interface AnswerApiResponse extends ApiResponse {
   data: Answer | null;
+}
+
+// =====================================================
+// RESULTS DASHBOARD
+// =====================================================
+
+export interface CBTResultsDashboardStats {
+  total_exams: number;
+
+  total_attempts: number;
+
+  average_percentage: number;
+
+  overall_pass_rate: number;
+}
+
+export interface CBTResultsDashboardItem {
+  exam_id: string;
+
+  title: string;
+
+  class_name: string;
+
+  subject_name: string;
+
+  attempts: number;
+
+  average_score: number;
+
+  average_percentage: number;
+
+  highest_score: number;
+
+  lowest_score: number;
+
+  pass_rate: number;
+
+  total_marks: number;
+
+  published: boolean;
+
+  starts_at: string;
+
+  ends_at: string;
+}
+
+export interface CBTResultsDashboard {
+  results: CBTResultsDashboardItem[];
+
+  count: number;
+
+  stats: CBTResultsDashboardStats;
+}
+
+export interface CBTResultsDashboardApiResponse extends ApiResponse {
+  data: CBTResultsDashboard | null;
 }

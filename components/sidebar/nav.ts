@@ -126,6 +126,10 @@ export function getSidebarNavigation(
             label: "CBT",
             href: "/school-admin/cbt",
             icon: GraduationCap,
+            children: [
+              { label: "CBT Exams", href: "/school-admin/cbt/exams" },
+              { label: "CBT Results", href: "/school-admin/cbt/results" },
+            ],
           },
 
           {
