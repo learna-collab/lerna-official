@@ -122,22 +122,6 @@ export default function ResultsDashboardCard({
             </div>
           </div>
         </div>
-
-        {/* Schedule */}
-
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Started</span>
-
-            <span>{new Date(exam.starts_at).toLocaleDateString()}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Ends</span>
-
-            <span>{new Date(exam.ends_at).toLocaleDateString()}</span>
-          </div>
-        </div>
       </CardContent>
 
       {/* Footer */}

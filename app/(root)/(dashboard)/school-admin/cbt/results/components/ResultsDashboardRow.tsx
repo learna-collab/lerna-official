@@ -27,10 +27,6 @@ export default function ResultsDashboardRow({
       <TableCell>
         <div className="space-y-1">
           <p className="font-semibold">{exam.title}</p>
-
-          <p className="text-xs text-muted-foreground">
-            {new Date(exam.starts_at).toLocaleDateString()}
-          </p>
         </div>
       </TableCell>
 
