@@ -128,18 +128,6 @@ export default function ExamInformation({ exam }: ExamInformationProps) {
                   Examination Schedule
                 </CardTitle>
               </CardHeader>
-
-              {/* <CardContent className="space-y-5">
-                <SettingRow
-                  label="Start"
-                  value={format(new Date(exam.starts_at), "PPP p")}
-                />
-
-                <SettingRow
-                  label="End"
-                  value={format(new Date(exam.ends_at), "PPP p")}
-                />
-              </CardContent> */}
             </Card>
           </div>
         </div>
