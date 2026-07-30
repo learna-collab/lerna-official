@@ -517,7 +517,7 @@ export interface ResubmitBatchResponse {
   message: string;
 }
 
-export class TeacherService {
+class TeacherService {
   // ====================================
   // DASHBOARD
   // ====================================
