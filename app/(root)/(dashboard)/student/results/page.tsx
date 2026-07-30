@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 
 import { StudentService } from "@/app/services/student.service";
-import { AcademicService } from "@/app/services/academic.service";
+import { AcademicSetupService } from "@/app/services/academicSetup.service";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -69,9 +69,10 @@ export default function StudentResultsPage() {
     try {
       setLoading(true);
 
-      const active = await AcademicService.getActive();
+      // Use existing academic setup service
+      const current = await AcademicSetupService.getCurrentAcademicPeriod();
 
-      if (!active?.session?.id || !active?.term?.id) {
+      if (!current?.session_id || !current?.term_id) {
         setSessionId(null);
         setTermId(null);
         setData(null);
@@ -79,11 +80,11 @@ export default function StudentResultsPage() {
         return;
       }
 
-      setSessionId(active.session.id);
-      setTermId(active.term.id);
+      setSessionId(current.session_id);
+      setTermId(current.term_id);
 
       const response: StudentResultApiResponse =
-        await StudentService.getResults(active.session.id, active.term.id);
+        await StudentService.getResults(current.session_id, current.term_id);
 
       setMessage(response.message);
 

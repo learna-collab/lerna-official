@@ -1,21 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
 import {
-  AcademicService,
-  ActiveAcademicPeriod,
-} from "@/app/services/academic.service";
+  AcademicSetupService,
+  SchoolAcademicPeriodResponse,
+} from "../services/academicSetup.service";
 
 export function useAcademicPeriod() {
-  const [data, setData] = useState<ActiveAcademicPeriod | null>(null);
+  const [data, setData] = useState<SchoolAcademicPeriodResponse | null>(null);
 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
+    async function loadAcademicPeriod() {
       try {
-        const response = await AcademicService.getActive();
+        const response = await AcademicSetupService.getCurrentAcademicPeriod();
 
         setData(response);
       } catch (error) {
@@ -23,13 +22,28 @@ export function useAcademicPeriod() {
       } finally {
         setLoading(false);
       }
-    })();
+    }
+
+    void loadAcademicPeriod();
   }, []);
 
   return {
     academicPeriod: data,
-    session: data?.session,
-    term: data?.term,
+
+    session: data
+      ? {
+          id: data.session_id,
+          name: data.session_name,
+        }
+      : null,
+
+    term: data
+      ? {
+          id: data.term_id,
+          name: data.term_name,
+        }
+      : null,
+
     loading,
   };
 }

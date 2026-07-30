@@ -517,7 +517,7 @@ export interface ResubmitBatchResponse {
   message: string;
 }
 
-class TeacherService {
+export class TeacherService {
   // ====================================
   // DASHBOARD
   // ====================================
@@ -529,23 +529,6 @@ class TeacherService {
 
   async getActiveAcademic() {
     const { data } = await api.get("/academic/active");
-    return data;
-  }
-
-  // ====================================
-  // LESSONS
-  // ====================================
-
-  async searchLessons(params: {
-    class_name: string;
-    subject_name: string;
-    session_name: string;
-    term_name: string;
-  }): Promise<LessonSearchResponse> {
-    const { data } = await api.get("/teacher/lessons/search", {
-      params,
-    });
-
     return data;
   }
 

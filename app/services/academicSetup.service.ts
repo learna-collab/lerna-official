@@ -1,6 +1,31 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { api } from "@/lib/api";
+/* ===========================================================
+ * SCHOOL ACADEMIC PERIOD
+ * =========================================================== */
+
+export interface AcademicPeriodOption {
+  id: string;
+  name: string;
+}
+
+export interface AcademicPeriodOptionsResponse {
+  sessions: AcademicPeriodOption[];
+  terms: AcademicPeriodOption[];
+}
+
+export interface SchoolAcademicPeriodResponse {
+  session_id: string;
+  session_name: string;
+  term_id: string;
+  term_name: string;
+}
+
+export interface UpdateSchoolAcademicPeriodRequest {
+  session_id: string;
+  term_id: string;
+}
 
 /* ===========================================================
  * TEMPLATE TYPES
@@ -294,5 +319,31 @@ export class AcademicSetupService {
     );
 
     return data;
+  }
+  /* ===========================================================
+   * SCHOOL ACADEMIC PERIOD
+   * =========================================================== */
+
+  static async getAcademicPeriodOptions(): Promise<AcademicPeriodOptionsResponse> {
+    const response = await api.get("/school-admin/academic-period/options");
+
+    return response.data;
+  }
+
+  static async getCurrentAcademicPeriod(): Promise<SchoolAcademicPeriodResponse | null> {
+    const response = await api.get("/school-admin/academic-period/current");
+
+    return response.data;
+  }
+
+  static async updateCurrentAcademicPeriod(
+    payload: UpdateSchoolAcademicPeriodRequest,
+  ): Promise<SchoolAcademicPeriodResponse> {
+    const response = await api.put(
+      "/school-admin/academic-period/current",
+      payload,
+    );
+
+    return response.data;
   }
 }

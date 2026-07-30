@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 
 import { Input } from "@/components/ui/input";
+import { AcademicSetupService } from "@/app/services/academicSetup.service";
 
 /* TYPES */
 interface SchoolClass {
@@ -115,19 +116,35 @@ export default function ResultsPage() {
   /* LOAD FILTERS */
   async function loadFilters() {
     try {
-      const [c, s, t] = await Promise.all([
-        SchoolAdminService.getClasses(),
-        SchoolAdminService.getSessions(),
-        SchoolAdminService.getTerms(),
+      const [setup, options] = await Promise.all([
+        AcademicSetupService.getSchoolSetup(),
+        AcademicSetupService.getAcademicPeriodOptions(),
       ]);
 
-      console.log("CLASSES RESPONSE:", c);
-      console.log("SESSIONS RESPONSE:", s);
-      console.log("TERMS RESPONSE:", t);
+      // Classes from school setup
+      const schoolClasses = setup.classes.map((cls) => ({
+        id: cls.id,
+        name: cls.name,
+      }));
 
-      setClasses(normalize(c));
-      setSessions(normalize(s));
-      setTerms(normalize(t));
+      setClasses(schoolClasses);
+
+      // Sessions and terms from academic period options
+      setSessions(options.sessions);
+      setTerms(options.terms);
+
+      // Optional: preselect first available values
+      if (schoolClasses.length > 0) {
+        setClassId(schoolClasses[0].id);
+      }
+
+      if (options.sessions.length > 0) {
+        setSessionId(options.sessions[0].id);
+      }
+
+      if (options.terms.length > 0) {
+        setTermId(options.terms[0].id);
+      }
     } catch (err) {
       console.error("FILTER ERROR:", err);
       toast.error("Failed to load filters");

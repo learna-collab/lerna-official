@@ -1,8 +1,6 @@
 "use client";
 
-import { CalendarDays, CheckCircle2, Clock3, Eye } from "lucide-react";
-
-import { format } from "date-fns";
+import { CheckCircle2, Clock3, Eye, FileText } from "lucide-react";
 
 import { Exam } from "@/app/types/cbt";
 
@@ -12,10 +10,10 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 
 import ExamActions from "../components/ExamActions";
@@ -46,9 +44,7 @@ export default function ExamCard({
   publishing = false,
   deleting = false,
   onView,
-  onEdit,
   onQuestions,
-  onResults,
   onPublish,
   onDelete,
 }: ExamCardProps) {
@@ -74,11 +70,7 @@ export default function ExamCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <ExamStatusBadge
-            published={exam.is_published}
-            startsAt={exam.starts_at}
-            endsAt={exam.ends_at}
-          />
+          <ExamStatusBadge published={exam.is_published} />
 
           <Badge variant="outline">{exam.total_marks} Marks</Badge>
 
@@ -95,7 +87,7 @@ export default function ExamCard({
 
             <div className="flex items-center gap-2 font-semibold">
               <Clock3 className="h-4 w-4 text-primary" />
-              <span>{exam.duration_minutes} mins</span>
+              <span>{exam.duration_minutes} Minutes</span>
             </div>
           </div>
 
@@ -104,31 +96,10 @@ export default function ExamCard({
               Total Marks
             </p>
 
-            <p className="text-lg font-semibold">{exam.total_marks}</p>
-          </div>
-        </div>
-
-        <div className="rounded-xl border">
-          <div className="flex items-center justify-between border-b px-4 py-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CalendarDays className="h-4 w-4" />
-              <span>Start Date</span>
+            <div className="flex items-center gap-2 font-semibold">
+              <FileText className="h-4 w-4 text-primary" />
+              <span>{exam.total_marks}</span>
             </div>
-
-            <span className="text-sm font-medium">
-              {format(new Date(exam.starts_at), "PPP")}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CalendarDays className="h-4 w-4" />
-              <span>End Date</span>
-            </div>
-
-            <span className="text-sm font-medium">
-              {format(new Date(exam.ends_at), "PPP")}
-            </span>
           </div>
         </div>
 
@@ -141,13 +112,14 @@ export default function ExamCard({
 
               <p className="text-sm text-muted-foreground">
                 {exam.is_published
-                  ? "This examination has been published and is available according to its scheduled start time."
-                  : "This examination is still in draft mode and is not yet available to students."}
+                  ? "This examination is published and available to eligible students."
+                  : "This examination is currently in draft mode and is not visible to students."}
               </p>
             </div>
           </div>
         </div>
       </CardContent>
+
       <CardFooter className="flex gap-3 border-t bg-muted/20 p-6">
         <Button variant="outline" className="flex-1" onClick={onView}>
           <Eye className="mr-2 h-4 w-4" />

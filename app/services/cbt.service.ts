@@ -12,6 +12,10 @@ import type {
   ExamListApiResponse,
   QuestionApiResponse,
   SubmitAnswerRequest,
+  StudentExamListApiResponse,
+  StudentExamAttemptApiResponse,
+  StudentHistoryApiResponse,
+  StudentResultApiResponse,
 } from "@/app/types/cbt";
 
 export class CBTService {
@@ -144,26 +148,40 @@ export class CBTService {
 
     return response.data;
   }
-
   // ======================================================
   // STUDENT
   // ======================================================
 
-  static async getAvailableExams(
-    classId: string,
-  ): Promise<ExamListApiResponse> {
-    const response = await api.get<ExamListApiResponse>("/cbt/student/exams", {
-      params: {
-        class_id: classId,
-      },
+  static async getAvailableExams(): Promise<StudentExamListApiResponse> {
+    const response =
+      await api.get<StudentExamListApiResponse>("/cbt/student/exams");
+
+    return response.data;
+  }
+  static async updateCurrentQuestion(
+    attemptId: string,
+    currentQuestionIndex: number,
+  ) {
+    return api.patch(`/cbt/student/attempts/${attemptId}/position`, {
+      current_question_index: currentQuestionIndex,
     });
+  }
+
+  static async startExam(
+    examId: string,
+  ): Promise<StudentExamAttemptApiResponse> {
+    const response = await api.post<StudentExamAttemptApiResponse>(
+      `/cbt/student/exams/${examId}/start`,
+    );
 
     return response.data;
   }
 
-  static async startExam(examId: string): Promise<AttemptApiResponse> {
-    const response = await api.post<AttemptApiResponse>(
-      `/cbt/student/exams/${examId}/start`,
+  static async resumeExam(
+    attemptId: string,
+  ): Promise<StudentExamAttemptApiResponse> {
+    const response = await api.get<StudentExamAttemptApiResponse>(
+      `/cbt/student/attempts/${attemptId}`,
     );
 
     return response.data;
@@ -188,26 +206,18 @@ export class CBTService {
     return response.data;
   }
 
-  static async resumeExam(attemptId: string): Promise<AttemptApiResponse> {
-    const response = await api.get<AttemptApiResponse>(
-      `/cbt/student/attempts/${attemptId}`,
-    );
-
-    return response.data;
-  }
-
   static async getStudentResult(
     attemptId: string,
-  ): Promise<AttemptApiResponse> {
-    const response = await api.get<AttemptApiResponse>(
+  ): Promise<StudentResultApiResponse> {
+    const response = await api.get<StudentResultApiResponse>(
       `/cbt/student/results/${attemptId}`,
     );
 
     return response.data;
   }
 
-  static async getStudentHistory(): Promise<AttemptListApiResponse> {
-    const response = await api.get<AttemptListApiResponse>(
+  static async getStudentHistory(): Promise<StudentHistoryApiResponse> {
+    const response = await api.get<StudentHistoryApiResponse>(
       "/cbt/student/history",
     );
 

@@ -248,10 +248,9 @@ export default function TeachersPage() {
                     <th className="px-5 py-4 text-left">Class</th>
 
                     <th className="px-5 py-4 text-left">Username</th>
+                    <th className="px-5 py-4 text-left">Password</th>
 
                     <th className="px-5 py-4 text-left">Qualification</th>
-
-                    <th className="px-5 py-4 text-left">Account</th>
 
                     <th className="px-5 py-4 text-right">Actions</th>
                   </tr>
@@ -313,26 +312,17 @@ export default function TeachersPage() {
                             {teacher.username}
                           </div>
                         </td>
+                        <td className="px-5 py-4">
+                          <div className="rounded-md bg-muted px-3 py-2 font-mono text-sm">
+                            {teacher.password}
+                          </div>
+                        </td>
 
                         {/* Qualification */}
 
                         <td className="px-5 py-4">
                           {teacher.qualification || (
                             <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-
-                        {/* Account Status */}
-
-                        <td className="px-5 py-4">
-                          {teacher.username ? (
-                            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                              Credentials Generated
-                            </span>
-                          ) : (
-                            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                              Pending Credentials
-                            </span>
                           )}
                         </td>
 

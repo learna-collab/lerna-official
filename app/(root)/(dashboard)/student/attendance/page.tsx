@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 
-import { AcademicService } from "@/app/services/academic.service";
+import { AcademicSetupService } from "@/app/services/academicSetup.service";
 import { StudentService } from "@/app/services/student.service";
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -41,19 +41,20 @@ export default function StudentAttendancePage() {
       try {
         setLoading(true);
 
-        const active = await AcademicService.getActive();
+        // Use existing academic period service
+        const current = await AcademicSetupService.getCurrentAcademicPeriod();
 
-        if (!active?.session || !active?.term) {
+        if (!current?.session_id || !current?.term_id) {
           setRecords([]);
           setSummary(null);
           return;
         }
 
         const [attendanceData, summaryData] = await Promise.all([
-          StudentService.getAttendance(active.session.id, active.term.id),
+          StudentService.getAttendance(current.session_id, current.term_id),
           StudentService.getAttendanceSummary(
-            active.session.id,
-            active.term.id,
+            current.session_id,
+            current.term_id,
           ),
         ]);
 
@@ -74,7 +75,7 @@ export default function StudentAttendancePage() {
     if (isLoadingAuth) return;
     if (!accessToken) return;
 
-    loadAttendance();
+    void loadAttendance();
   }, [isLoadingAuth, accessToken]);
 
   if (loading) return <DashboardSkeleton />;

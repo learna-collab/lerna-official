@@ -8,10 +8,10 @@ import { useAuthStore } from "@/app/store/auth-store";
 
 type Props = {
   children: React.ReactNode;
-  redirectTo?: string;
+  redirectTo: string;
 };
 
-export function LogoutButton({ children, redirectTo = "/login" }: Props) {
+export function LogoutButton({ children, redirectTo }: Props) {
   const router = useRouter();
 
   const logout = useAuthStore((s) => s.logout);

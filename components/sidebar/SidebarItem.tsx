@@ -32,8 +32,10 @@ export default function SidebarItem({
   const hasChildren = !!item.children?.length;
 
   const parentActive =
-    (item.href && isSidebarRouteActive(pathname, item.href)) ||
-    item.children?.some((child) => isSidebarRouteActive(pathname, child.href));
+    (item.href && isSidebarRouteActive(pathname, item.href, item.exact)) ||
+    item.children?.some((child) =>
+      isSidebarRouteActive(pathname, child.href, child.exact),
+    );
 
   const Icon = item.icon;
 
@@ -98,9 +100,13 @@ export default function SidebarItem({
               expanded ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
             }`}
           >
-            <div className="ml-6 border-l border-gray-200 pl-4 space-y-1">
+            <div className="ml-6 space-y-1 border-l border-gray-200 pl-4">
               {item.children!.map((child) => {
-                const active = isSidebarRouteActive(pathname, child.href);
+                const active = isSidebarRouteActive(
+                  pathname,
+                  child.href,
+                  child.exact,
+                );
 
                 return (
                   <Link

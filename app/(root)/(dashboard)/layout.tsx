@@ -1,29 +1,27 @@
-import Footer from "@/components/layout/footer";
-import Navbar from "@/components/layout/navbar";
 import Sidebar from "@/components/dashboard/sidebar";
+import TopNavbar from "@/components/dashboard/layout/TopNavbar";
 import { ClassProvider } from "@/components/sidebar/ClassContext";
 
-export default function PublicLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      <Navbar />
+    <ClassProvider>
+      <div className="min-h-screen bg-background">
+        {/* Top Navigation */}
+        <TopNavbar />
 
-      {/* MAIN AREA */}
-      <div className="flex flex-1 pt-20">
-        <ClassProvider>
+        {/* Main Content */}
+        <div className="flex pt-[72px]">
           <Sidebar />
 
           <main className="flex-1 min-w-0 transition-all duration-300">
-            {children}
+            <div className="px-4 py-6 sm:px-6 lg:px-8">{children}</div>
           </main>
-        </ClassProvider>
+        </div>
       </div>
-
-      <Footer />
-    </div>
+    </ClassProvider>
   );
 }

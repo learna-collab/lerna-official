@@ -2,172 +2,258 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useState } from "react";
-
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { Search, FileText, ExternalLink } from "lucide-react";
+import {
+  TeacherLessonService,
+  LessonResponse,
+} from "@/app/services/teacher-lesson.service";
 
 import { teacherService } from "@/app/services/teacher.service";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAcademicPeriod } from "@/app/hooks/use-academic-period";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { LessonFilters } from "@/components/lessons/LessonFilters";
+import { LessonTable } from "@/components/lessons/LessonTable";
+import { LessonEmptyState } from "@/components/lessons/LessonEmptyState";
 
-import { Lesson } from "@/app/services/teacher.service";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Label } from "@/components/ui/label";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type ClassOption = { id: string; name: string };
+type SubjectOption = { id: string; name: string };
 
 export default function TeacherLessonsPage() {
-  const [loading, setLoading] = useState(false);
+  const [lessons, setLessons] = useState<LessonResponse[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [className, setClassName] = useState("");
-  const [subjectName, setSubjectName] = useState("");
-  const [sessionName, setSessionName] = useState("");
-  const [termName, setTermName] = useState("");
+  const [weekNumber, setWeekNumber] = useState("");
 
-  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [classes, setClasses] = useState<ClassOption[]>([]);
+  const [subjects, setSubjects] = useState<SubjectOption[]>([]);
 
-  const searchLessons = async () => {
+  const [classId, setClassId] = useState("");
+  const [subjectId, setSubjectId] = useState("");
+
+  const { session, term, loading: academicLoading } = useAcademicPeriod();
+
+  const sessionId = session?.id ?? "";
+  const termId = term?.id ?? "";
+
+  // =========================================================
+  // LOAD TEACHER CLASSES
+  // =========================================================
+
+  async function loadClasses() {
+    try {
+      const classData = await teacherService.getClasses();
+
+      setClasses(classData);
+
+      if (classData.length > 0) {
+        setClassId(classData[0].id);
+      }
+    } catch {
+      toast.error("Failed to load classes.");
+    }
+  }
+
+  // =========================================================
+  // LOAD SUBJECTS FOR SELECTED CLASS
+  // =========================================================
+
+  async function loadSubjects(selectedClassId: string) {
+    if (!selectedClassId) {
+      setSubjects([]);
+      setSubjectId("");
+      return;
+    }
+
+    try {
+      const subjectData = await teacherService.getSubjects(selectedClassId);
+
+      setSubjects(subjectData);
+
+      if (subjectData.length > 0) {
+        setSubjectId(subjectData[0].id);
+      } else {
+        setSubjectId("");
+      }
+    } catch {
+      toast.error("Failed to load subjects.");
+    }
+  }
+
+  // =========================================================
+  // LOAD LESSONS
+  // =========================================================
+
+  async function loadLessons(selectedWeek?: number) {
+    if (!classId || !subjectId || !sessionId || !termId) return;
+
     try {
       setLoading(true);
 
-      const response = await teacherService.searchLessons({
-        class_name: className,
-        subject_name: subjectName,
-        session_name: sessionName,
-        term_name: termName,
+      const data = await TeacherLessonService.getLessons({
+        classId,
+        subjectId,
+        sessionId,
+        termId,
+        weekNumber: selectedWeek,
       });
 
-      setLessons(response.lessons || []);
-    } catch (error) {
-      console.error(error);
-
-      toast.error("Failed to load lessons");
+      setLessons(data);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.detail ?? "Failed to load lessons.");
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  // =========================================================
+  // INITIAL LOAD
+  // =========================================================
+
+  useEffect(() => {
+    void Promise.resolve().then(() => loadClasses());
+  }, []);
+
+  // =========================================================
+  // LOAD SUBJECTS WHEN CLASS CHANGES
+  // =========================================================
+
+  useEffect(() => {
+    if (classId) {
+      void Promise.resolve().then(() => loadSubjects(classId));
+    }
+  }, [classId]);
+
+  // =========================================================
+  // LOAD LESSONS WHEN FILTERS CHANGE
+  // =========================================================
+
+  useEffect(() => {
+    if (!academicLoading && sessionId && termId && classId && subjectId) {
+      void Promise.resolve().then(() => loadLessons());
+    }
+  }, [academicLoading, sessionId, termId, classId, subjectId]);
+
+  // =========================================================
+  // FILTER ACTIONS
+  // =========================================================
+
+  function handleApplyFilter() {
+    if (!weekNumber) {
+      void loadLessons();
+      return;
+    }
+
+    void loadLessons(Number(weekNumber));
+  }
+
+  function handleResetFilter() {
+    setWeekNumber("");
+    void loadLessons();
+  }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 p-8">
+    <div className="mx-auto max-w-7xl space-y-6 p-6">
+      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Lessons</h1>
+        <h1 className="text-3xl font-bold tracking-tight">My Lessons</h1>
 
-        <p className="text-muted-foreground">Search and manage lesson plans</p>
+        <p className="text-muted-foreground mt-1">
+          View lesson notes assigned to your class and subject.
+        </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lesson Search</CardTitle>
-        </CardHeader>
+      {/* Filters */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Class</Label>
 
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <Input
-              placeholder="Class Name"
-              value={className}
-              onChange={(e) => setClassName(e.target.value)}
-            />
+          <Select value={classId} onValueChange={setClassId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select class" />
+            </SelectTrigger>
 
-            <Input
-              placeholder="Subject Name"
-              value={subjectName}
-              onChange={(e) => setSubjectName(e.target.value)}
-            />
-
-            <Input
-              placeholder="Session"
-              value={sessionName}
-              onChange={(e) => setSessionName(e.target.value)}
-            />
-
-            <Input
-              placeholder="Term"
-              value={termName}
-              onChange={(e) => setTermName(e.target.value)}
-            />
-          </div>
-
-          <Button className="mt-4" onClick={searchLessons} disabled={loading}>
-            <Search className="mr-2 h-4 w-4" />
-
-            {loading ? "Searching..." : "Search Lessons"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Lesson Results</CardTitle>
-        </CardHeader>
-
-        <CardContent>
-          {lessons.length === 0 ? (
-            <div className="text-muted-foreground py-10 text-center">
-              No lessons found
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {lessons.map((lesson) => (
-                <div key={lesson.id} className="rounded-lg border p-5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
-
-                        <h3 className="font-semibold">{lesson.title}</h3>
-                      </div>
-
-                      <p className="mt-1 text-sm font-medium">{lesson.topic}</p>
-
-                      <div className="text-muted-foreground mt-3 space-y-1 text-sm">
-                        <p>Class: {lesson.class_name}</p>
-
-                        <p>Subject: {lesson.subject_name}</p>
-
-                        <p>Session: {lesson.session_name}</p>
-
-                        <p>Term: {lesson.term_name}</p>
-
-                        <p>Published: {lesson.is_published ? "Yes" : "No"}</p>
-                      </div>
-
-                      {lesson.objectives && (
-                        <div className="mt-3">
-                          <p className="text-sm font-medium">Objectives</p>
-
-                          <p className="text-muted-foreground text-sm">
-                            {lesson.objectives}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2">
-                      {lesson.file_url && (
-                        <Button size="sm" variant="outline" asChild>
-                          <a
-                            href={lesson.file_url}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                            Open
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="text-muted-foreground mt-4 text-xs">
-                    Created: {new Date(lesson.created_at).toLocaleString()}
-                  </div>
-                </div>
+            <SelectContent>
+              {classes.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.name}
+                </SelectItem>
               ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Subject</Label>
+
+          <Select
+            value={subjectId}
+            onValueChange={setSubjectId}
+            disabled={!classId || subjects.length === 0}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select subject" />
+            </SelectTrigger>
+
+            <SelectContent>
+              {subjects.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Week Filter */}
+      <LessonFilters
+        weekNumber={weekNumber}
+        onWeekNumberChange={setWeekNumber}
+        onApply={handleApplyFilter}
+        onReset={handleResetFilter}
+      />
+
+      {/* Content */}
+      {loading || academicLoading ? (
+        <div className="space-y-3">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      ) : lessons.length === 0 ? (
+        <LessonEmptyState
+          title="No lessons available"
+          description="No lesson notes have been uploaded for the selected filters."
+        />
+      ) : (
+        <LessonTable
+          lessons={lessons.map((lesson) => ({
+            id: lesson.id,
+            week_number: lesson.week_number,
+            lesson_day: lesson.lesson_day,
+            class_name: lesson.class_name,
+            subject_name: lesson.subject_name,
+            topic: lesson.topic,
+            title: lesson.title,
+          }))}
+          basePath="/teacher/lessons"
+        />
+      )}
     </div>
   );
 }

@@ -61,14 +61,6 @@ export default function ResultsTableRow({
       {/* Answered Questions */}
       {/* ===================================== */}
 
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <ClipboardCheck className="h-4 w-4 text-primary" />
-
-          <span className="font-medium">{attempt.answered_questions ?? 0}</span>
-        </div>
-      </TableCell>
-
       {/* ===================================== */}
       {/* Score */}
       {/* ===================================== */}
@@ -87,7 +79,7 @@ export default function ResultsTableRow({
       {/* ===================================== */}
 
       <TableCell>
-        <StatusBadge passed={attempt.passed} size="sm" />
+        <StatusBadge passed={attempt.is_passed} size="sm" />
       </TableCell>
 
       {/* ===================================== */}
@@ -98,7 +90,7 @@ export default function ResultsTableRow({
         <div className="flex items-center gap-2 text-muted-foreground">
           <CalendarClock className="h-4 w-4" />
 
-          <span className="text-sm">{formatDate(attempt.completed_at)}</span>
+          <span className="text-sm">{formatDate(attempt.submitted_at)}</span>
         </div>
       </TableCell>
 

@@ -82,6 +82,8 @@ export default function ExamResultsPage() {
       }
 
       setExam(examResponse.data);
+      console.log("examresponse:================", examResponse.data);
+      console.log("resultresponse:================", resultsResponse.data);
 
       setAttempts(resultsResponse.data.attempts ?? []);
     } catch {
@@ -126,28 +128,24 @@ export default function ExamResultsPage() {
 
           return nameA.localeCompare(nameB);
         });
-
         break;
 
       case "score":
         data.sort((a, b) => b.score - a.score);
-
         break;
 
       case "percentage":
         data.sort((a, b) => b.percentage - a.percentage);
-
         break;
 
       case "submitted":
         data.sort((a, b) => {
-          const timeA = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+          const timeA = a.submitted_at ? new Date(a.submitted_at).getTime() : 0;
 
-          const timeB = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+          const timeB = b.submitted_at ? new Date(b.submitted_at).getTime() : 0;
 
           return timeB - timeA;
         });
-
         break;
     }
 
@@ -157,7 +155,7 @@ export default function ExamResultsPage() {
   const stats = useMemo(() => {
     const totalAttempts = attempts.length;
 
-    const passed = attempts.filter((attempt) => attempt.passed).length;
+    const passed = attempts.filter((attempt) => attempt.is_passed).length;
 
     const failed = totalAttempts - passed;
 
@@ -181,8 +179,10 @@ export default function ExamResultsPage() {
     setDialogOpen(true);
   }
 
+  console.log(stats);
+
   return (
-    <div className="mx-auto max-w-7xl space-y-8 p-8">
+    <div className="mx-auto max-w-7xl space-y-8 p-10">
       {/* ============================================== */}
       {/* Header */}
       {/* ============================================== */}

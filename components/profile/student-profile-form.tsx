@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface Props {
   user: any;
@@ -56,11 +57,11 @@ export function StudentProfileForm({ user, profile }: Props) {
 
       await ProfileService.updateProfile(form);
 
-      alert("Profile updated successfully");
+      toast.error("Profile updated successfully");
     } catch (error) {
       console.error(error);
 
-      alert("Failed to update profile");
+      toast.error("Failed to update profile");
     } finally {
       setLoading(false);
     }

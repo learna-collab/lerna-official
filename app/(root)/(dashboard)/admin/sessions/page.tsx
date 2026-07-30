@@ -6,9 +6,9 @@ import { useEffect, useState } from "react";
 
 import { toast } from "sonner";
 
-import { Plus, Calendar, CheckCircle } from "lucide-react";
+import { Plus, Calendar, CheckCircle, Trash2, Power } from "lucide-react";
 
-import { SchoolAdminService } from "@/app/services/school-admin.service";
+import { AdminService } from "@/app/services/admin.service";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -37,15 +37,21 @@ export default function SessionsPage() {
 
   const [loading, setLoading] = useState(true);
 
+  const [creating, setCreating] = useState(false);
+
+  const [open, setOpen] = useState(false);
+
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
   const loadSessions = async () => {
     try {
-      const response = await SchoolAdminService.getSessions();
+      setLoading(true);
 
-      setSessions(Array.isArray(response?.sessions) ? response.sessions : []);
+      const data = await AdminService.getSessions();
+
+      setSessions(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
 
@@ -67,7 +73,9 @@ export default function SessionsPage() {
     }
 
     try {
-      await SchoolAdminService.createSession({
+      setCreating(true);
+
+      await AdminService.createSession({
         name,
         start_date: startDate,
         end_date: endDate,
@@ -78,18 +86,21 @@ export default function SessionsPage() {
       setName("");
       setStartDate("");
       setEndDate("");
+      setOpen(false);
 
       await loadSessions();
     } catch (error) {
       console.error(error);
 
       toast.error("Failed to create session");
+    } finally {
+      setCreating(false);
     }
   };
 
   const activateSession = async (sessionId: string) => {
     try {
-      await SchoolAdminService.activateSession(sessionId);
+      await AdminService.activateSession(sessionId);
 
       toast.success("Session activated successfully");
 
@@ -101,18 +112,53 @@ export default function SessionsPage() {
     }
   };
 
+  const deactivateSession = async (sessionId: string) => {
+    try {
+      await AdminService.deactivateSession(sessionId);
+
+      toast.success("Session deactivated successfully");
+
+      await loadSessions();
+    } catch (error) {
+      console.error(error);
+
+      toast.error("Failed to deactivate session");
+    }
+  };
+
+  const deleteSession = async (sessionId: string) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this session?",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await AdminService.deleteSession(sessionId);
+
+      toast.success("Session deleted successfully");
+
+      await loadSessions();
+    } catch (error) {
+      console.error(error);
+
+      toast.error("Failed to delete session");
+    }
+  };
+
   return (
     <div className="mx-auto max-w-7xl space-y-8 p-8">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Academic Sessions</h1>
 
           <p className="text-muted-foreground">
-            Manage school academic sessions
+            Create and manage academic sessions for all schools
           </p>
         </div>
 
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -130,7 +176,7 @@ export default function SessionsPage() {
                 <label className="text-sm font-medium">Session Name</label>
 
                 <Input
-                  placeholder="e.g. 2025/2026"
+                  placeholder="e.g. 2026/2027"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
@@ -158,8 +204,12 @@ export default function SessionsPage() {
                 </div>
               </div>
 
-              <Button className="w-full" onClick={createSession}>
-                Create Session
+              <Button
+                className="w-full"
+                onClick={createSession}
+                disabled={creating}
+              >
+                {creating ? "Creating..." : "Create Session"}
               </Button>
             </div>
           </DialogContent>
@@ -240,15 +290,34 @@ export default function SessionsPage() {
                   </div>
                 </div>
 
-                {!session.is_active && (
+                <div className="flex flex-wrap gap-2">
+                  {!session.is_active ? (
+                    <Button
+                      className="flex-1"
+                      onClick={() => activateSession(session.id)}
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Activate
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => deactivateSession(session.id)}
+                    >
+                      <Power className="mr-2 h-4 w-4" />
+                      Deactivate
+                    </Button>
+                  )}
+
                   <Button
-                    className="w-full"
-                    onClick={() => activateSession(session.id)}
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => deleteSession(session.id)}
                   >
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Activate Session
+                    <Trash2 className="h-4 w-4" />
                   </Button>
-                )}
+                </div>
               </CardContent>
             </Card>
           ))}

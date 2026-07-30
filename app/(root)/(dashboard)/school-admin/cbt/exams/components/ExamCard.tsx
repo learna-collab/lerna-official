@@ -141,25 +141,29 @@ export function ExamCard({ exam, onRefresh }: ExamCardProps) {
                 </Link>
               </DropdownMenuItem>
 
-              <DropdownMenuItem asChild>
-                <Link
-                  href={`/school-admin/cbt/exams/${exam.id}/edit`}
-                  className="flex cursor-pointer items-center"
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit Examination
-                </Link>
-              </DropdownMenuItem>
+              {!exam.is_published && (
+                <DropdownMenuItem asChild>
+                  <Link
+                    href={`/school-admin/cbt/exams/${exam.id}/edit`}
+                    className="flex cursor-pointer items-center"
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit Examination
+                  </Link>
+                </DropdownMenuItem>
+              )}
 
-              <DropdownMenuItem asChild>
-                <Link
-                  href={`/school-admin/cbt/exams/${exam.id}/questions`}
-                  className="flex cursor-pointer items-center"
-                >
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Manage Questions
-                </Link>
-              </DropdownMenuItem>
+              {!exam.is_published && (
+                <DropdownMenuItem asChild>
+                  <Link
+                    href={`/school-admin/cbt/exams/${exam.id}/questions`}
+                    className="flex cursor-pointer items-center"
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Manage Questions
+                  </Link>
+                </DropdownMenuItem>
+              )}
 
               <DropdownMenuItem asChild>
                 <Link
@@ -263,27 +267,19 @@ export function ExamCard({ exam, onRefresh }: ExamCardProps) {
             <p className="mt-2 font-semibold">{exam.total_marks}</p>
           </div>
         </div>
-        <div className="space-y-3 rounded-xl border p-4">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <CalendarDays className="h-4 w-4" />
-              Start Date
+        <div className="rounded-xl border bg-primary/5 p-4">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 text-primary" />
+
+            <div className="space-y-2">
+              <p className="font-medium">Examination Status</p>
+
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {exam.is_published
+                  ? "This examination has been published and is available for students."
+                  : "This examination is still in draft mode and cannot be accessed by students until it is published."}
+              </p>
             </div>
-
-            <span className="font-medium">
-              {format(new Date(exam.starts_at), "PPP")}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <CalendarDays className="h-4 w-4" />
-              End Date
-            </div>
-
-            <span className="font-medium">
-              {format(new Date(exam.ends_at), "PPP")}
-            </span>
           </div>
         </div>
       </CardContent>
@@ -298,6 +294,7 @@ export function ExamCard({ exam, onRefresh }: ExamCardProps) {
 
         <Button
           className="flex-1"
+          disabled={exam.is_published}
           onClick={() =>
             router.push(`/school-admin/cbt/exams/${exam.id}/questions`)
           }

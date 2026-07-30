@@ -169,115 +169,7 @@ export default function CBTDashboardPage() {
           </div>
         </CardContent>
       </Card>
-      {/* ====================================================== */}
-      {/* QUICK ACTIONS */}
-      {/* ====================================================== */}
 
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-xl font-semibold">Quick Actions</h2>
-
-          <p className="text-sm text-muted-foreground">
-            Frequently used examination management tasks.
-          </p>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          <Link href="/dashboard/school-admin/cbt/exams/create">
-            <Card className="group h-full cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-lg">
-              <CardContent className="flex h-full flex-col justify-between p-6">
-                <div>
-                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <FilePlus2 className="h-6 w-6" />
-                  </div>
-
-                  <h3 className="text-lg font-semibold">Create Exam</h3>
-
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Create a new CBT examination and assign it to a class and
-                    subject.
-                  </p>
-                </div>
-
-                <div className="mt-8 flex items-center text-sm font-medium text-primary">
-                  Get Started
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/dashboard/school-admin/cbt/exams">
-            <Card className="group h-full cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-lg">
-              <CardContent className="flex h-full flex-col justify-between p-6">
-                <div>
-                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
-                    <BookOpen className="h-6 w-6" />
-                  </div>
-
-                  <h3 className="text-lg font-semibold">Manage Exams</h3>
-
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Edit, publish or organize all CBT examinations from one
-                    place.
-                  </p>
-                </div>
-
-                <div className="mt-8 flex items-center text-sm font-medium text-primary">
-                  Open
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/dashboard/school-admin/cbt/results">
-            <Card className="group h-full cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-lg">
-              <CardContent className="flex h-full flex-col justify-between p-6">
-                <div>
-                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-green-500/10 text-green-600">
-                    <ClipboardCheck className="h-6 w-6" />
-                  </div>
-
-                  <h3 className="text-lg font-semibold">View Results</h3>
-
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Monitor student performance and examination statistics.
-                  </p>
-                </div>
-
-                <div className="mt-8 flex items-center text-sm font-medium text-primary">
-                  View Results
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/dashboard/school-admin/cbt/questions">
-            <Card className="group h-full cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-lg">
-              <CardContent className="flex h-full flex-col justify-between p-6">
-                <div>
-                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
-                    <CheckCircle2 className="h-6 w-6" />
-                  </div>
-
-                  <h3 className="text-lg font-semibold">Question Bank</h3>
-
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Maintain and organize questions across examinations.
-                  </p>
-                </div>
-
-                <div className="mt-8 flex items-center text-sm font-medium text-primary">
-                  Manage
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-      </section>
       {/* ====================================================== */}
       {/* RECENT EXAMINATIONS */}
       {/* ====================================================== */}
@@ -293,7 +185,7 @@ export default function CBTDashboardPage() {
           </div>
 
           <Button variant="outline" asChild>
-            <Link href="/dashboard/school-admin/cbt/exams">
+            <Link href="/school-admin/cbt/exams">
               View All
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
@@ -331,7 +223,7 @@ export default function CBTDashboardPage() {
               </p>
 
               <Button className="mt-8" asChild>
-                <Link href="/dashboard/school-admin/cbt/exams/create">
+                <Link href="/school-admin/cbt/exams/create">
                   <FilePlus2 className="mr-2 h-4 w-4" />
                   Create Examination
                 </Link>

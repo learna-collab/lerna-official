@@ -15,12 +15,12 @@ export function useProtectedRoute(role?: string) {
     if (!hydrated || isLoading) return;
 
     if (!user) {
-      router.replace("/");
+      router.replace("/schoolportal");
       return;
     }
 
     if (role && user.role !== role) {
-      router.replace("/");
+      router.replace("/schoolportal");
       return;
     }
   }, [hydrated, isLoading, user, role, router]);

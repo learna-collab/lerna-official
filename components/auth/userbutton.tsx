@@ -79,7 +79,7 @@ export const UserButton = () => {
 
             <DropdownMenuSeparator className="my-2 bg-white/10" />
 
-            <LogoutButton>
+            <LogoutButton redirectTo="/login">
               <DropdownMenuItem className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-red-200 transition hover:bg-red-500/20 focus:bg-red-500/20">
                 <LogOut className="h-4 w-4" />
                 Logout

@@ -54,27 +54,18 @@ import {
 
 import { Separator } from "@/components/ui/separator";
 
-const formSchema = z
-  .object({
-    class_id: z.string().min(1),
+const formSchema = z.object({
+  class_id: z.string().min(1),
 
-    subject_id: z.string().min(1),
+  subject_id: z.string().min(1),
 
-    title: z.string().min(3),
+  title: z.string().min(3),
 
-    instructions: z.string().optional(),
+  instructions: z.string().optional(),
 
-    duration_minutes: z.number().min(1),
-    total_marks: z.number().min(1),
-
-    starts_at: z.string().min(1),
-
-    ends_at: z.string().min(1),
-  })
-  .refine((data) => new Date(data.ends_at) > new Date(data.starts_at), {
-    path: ["end_time"],
-    message: "End time must be after start time.",
-  });
+  duration_minutes: z.number().min(1),
+  total_marks: z.number().min(1),
+});
 
 type FormValues = z.infer<typeof formSchema>;
 export default function CreateExamPage() {
@@ -102,10 +93,6 @@ export default function CreateExamPage() {
       duration_minutes: 60,
 
       total_marks: 100,
-
-      starts_at: "",
-
-      ends_at: "",
     },
   });
   const selectedClassId = form.watch("class_id");
@@ -400,38 +387,6 @@ export default function CreateExamPage() {
                             field.onChange(e.target.valueAsNumber)
                           }
                         />
-                      </FormControl>
-
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="starts_at"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Date & Time</FormLabel>
-
-                      <FormControl>
-                        <Input type="datetime-local" {...field} />
-                      </FormControl>
-
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="ends_at"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Date & Time</FormLabel>
-
-                      <FormControl>
-                        <Input type="datetime-local" {...field} />
                       </FormControl>
 
                       <FormMessage />

@@ -4,7 +4,8 @@
 import { useEffect, useState } from "react";
 
 import { StudentService } from "@/app/services/student.service";
-import { AcademicService } from "@/app/services/academic.service";
+import { AcademicSetupService } from "@/app/services/academicSetup.service";
+
 import { useAuthStore } from "@/app/store/auth-store";
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -30,7 +31,7 @@ export default function StudentDashboardPage() {
       try {
         const [dashboardData, academicData] = await Promise.all([
           StudentService.getDashboard(),
-          AcademicService.getActive(),
+          AcademicSetupService.getCurrentAcademicPeriod(),
         ]);
 
         setDashboard(dashboardData);
@@ -40,7 +41,7 @@ export default function StudentDashboardPage() {
       }
     }
 
-    loadData();
+    void loadData();
   }, [loading, user, token]);
 
   // show skeleton while auth is initializing
@@ -56,6 +57,29 @@ export default function StudentDashboardPage() {
   return (
     <div className="space-y-6 p-6 md:p-8">
       <DashboardHeader title={`Welcome, ${dashboard.student_name}`} />
+
+      {/* Current Academic Period */}
+      <div className="rounded-xl border bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-4 text-sm">
+          <div>
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">
+              Session
+            </p>
+            <p className="font-semibold">
+              {academic?.session_name ?? "Not set"}
+            </p>
+          </div>
+
+          <div className="h-8 w-px bg-slate-200" />
+
+          <div>
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">
+              Term
+            </p>
+            <p className="font-semibold">{academic?.term_name ?? "Not set"}</p>
+          </div>
+        </div>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard title="Average Score" value={dashboard.average_score ?? 0} />

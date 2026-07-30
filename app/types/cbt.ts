@@ -11,9 +11,6 @@ export interface CreateExamRequest {
 
   duration_minutes: number;
   total_marks: number;
-
-  starts_at: string;
-  ends_at: string;
 }
 
 export interface QuestionOptionCreate {
@@ -66,11 +63,7 @@ export interface SubjectInfo {
 }
 
 export interface Exam {
-  school_class?: ClassInfo;
-  subject?: SubjectInfo;
-  is_published: boolean;
   id: string;
-  question_count?: number;
 
   title: string;
   instructions?: string;
@@ -78,8 +71,13 @@ export interface Exam {
   duration_minutes: number;
   total_marks: number;
 
-  starts_at: string;
-  ends_at: string;
+  is_published: boolean;
+
+  question_count?: number;
+
+  school_class?: ClassInfo;
+  subject?: SubjectInfo;
+
   questions?: Question[];
 }
 
@@ -97,11 +95,11 @@ export interface Attempt {
   student_id: string;
 
   started_at: string;
-  completed_at?: string | null;
+  submitted_at?: string | null;
 
   score: number;
   percentage: number;
-  passed: boolean;
+  is_passed: boolean;
 
   student?: StudentInfo;
 
@@ -203,10 +201,6 @@ export interface CBTResultsDashboardItem {
   total_marks: number;
 
   published: boolean;
-
-  starts_at: string;
-
-  ends_at: string;
 }
 
 export interface CBTResultsDashboard {
@@ -219,4 +213,158 @@ export interface CBTResultsDashboard {
 
 export interface CBTResultsDashboardApiResponse extends ApiResponse {
   data: CBTResultsDashboard | null;
+}
+
+// =====================================================
+// STUDENT MODELS
+// =====================================================
+
+export type ExamAttemptStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
+
+export interface StudentQuestionOption {
+  id: string;
+
+  option_label: string;
+
+  option_text: string;
+
+  option_order: number;
+}
+
+export interface StudentQuestion {
+  id: string;
+
+  question_text: string;
+
+  marks: number;
+
+  order_no: number;
+
+  selected_option_id?: string | null;
+
+  options: StudentQuestionOption[];
+}
+
+export interface StudentExam {
+  id: string;
+
+  title: string;
+
+  instructions?: string;
+
+  duration_minutes: number;
+
+  total_marks: number;
+
+  class_name: string;
+
+  subject_name: string;
+
+  question_count: number;
+
+  attempt_status: ExamAttemptStatus;
+
+  attempt_id?: string | null;
+}
+
+export interface StudentExamAttempt {
+  attempt_id: string;
+
+  exam_id: string;
+
+  title: string;
+  current_question_index: number;
+
+  instructions?: string;
+
+  duration_minutes: number;
+
+  total_marks: number;
+
+  started_at: string;
+
+  completed_at?: string | null;
+
+  expires_at: string;
+
+  remaining_seconds: number;
+
+  questions: StudentQuestion[];
+}
+
+export interface StudentResult {
+  attempt_id: string;
+
+  exam_id: string;
+
+  exam_title: string;
+
+  subject_name: string;
+
+  total_marks: number;
+
+  score: number;
+
+  percentage: number;
+
+  passed: boolean;
+
+  total_questions: number;
+
+  answered_questions: number;
+
+  correct_answers: number;
+
+  wrong_answers: number;
+
+  unanswered_questions: number;
+
+  started_at: string;
+
+  completed_at?: string | null;
+}
+
+export interface StudentHistoryItem {
+  attempt_id: string;
+
+  exam_id: string;
+
+  exam_title: string;
+
+  subject_name: string;
+
+  score: number;
+
+  percentage: number;
+
+  passed: boolean;
+
+  completed_at?: string | null;
+}
+
+export interface StudentExamList {
+  exams: StudentExam[];
+
+  count: number;
+}
+
+export interface StudentHistory {
+  attempts: StudentHistoryItem[];
+
+  count: number;
+}
+export interface StudentExamListApiResponse extends ApiResponse {
+  data: StudentExamList | null;
+}
+
+export interface StudentExamAttemptApiResponse extends ApiResponse {
+  data: StudentExamAttempt | null;
+}
+
+export interface StudentResultApiResponse extends ApiResponse {
+  data: StudentResult | null;
+}
+
+export interface StudentHistoryApiResponse extends ApiResponse {
+  data: StudentHistory | null;
 }

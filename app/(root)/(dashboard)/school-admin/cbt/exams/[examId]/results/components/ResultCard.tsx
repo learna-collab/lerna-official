@@ -27,6 +27,7 @@ function formatDate(date?: string | null) {
 }
 
 export default function ResultCard({ attempt, onView }: ResultCardProps) {
+  console.log("attempt======================; ================", attempt);
   const studentName = attempt.student
     ? `${attempt.student.first_name} ${attempt.student.last_name}`
     : "Unknown Student";
@@ -49,7 +50,7 @@ export default function ResultCard({ attempt, onView }: ResultCardProps) {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="truncate text-lg font-semibold">{studentName}</h3>
 
-              <StatusBadge passed={attempt.passed} size="sm" />
+              <StatusBadge passed={attempt.is_passed} size="sm" />
             </div>
 
             <p className="mt-1 text-sm text-muted-foreground">
@@ -72,34 +73,6 @@ export default function ResultCard({ attempt, onView }: ResultCardProps) {
         {/* ====================================== */}
         {/* Details */}
         {/* ====================================== */}
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex items-center gap-3 rounded-lg border p-3">
-            <ClipboardCheck className="h-5 w-5 text-primary" />
-
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Answered
-              </p>
-
-              <p className="font-semibold">{attempt.answered_questions ?? 0}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 rounded-lg border p-3">
-            <CalendarClock className="h-5 w-5 text-primary" />
-
-            <div className="min-w-0">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Submitted
-              </p>
-
-              <p className="truncate text-sm font-medium">
-                {formatDate(attempt.completed_at)}
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* ====================================== */}
         {/* Footer */}

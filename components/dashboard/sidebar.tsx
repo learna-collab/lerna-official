@@ -99,17 +99,28 @@ export default function Sidebar() {
         className={`
 fixed
 md:sticky
-top-20
+top-[72px]
 left-0
 z-40
+
 flex
-h-[calc(100vh-5rem)]
+h-[calc(100vh-72px)]
 flex-col
+
 border-r
-bg-white
+border-border/60
+
+bg-background/95
+backdrop-blur-xl
+
+shadow-sm
+
 transition-all
 duration-300
-${collapsed ? "w-20" : "w-72"}
+ease-in-out
+
+${collapsed ? "w-24" : "w-72"}
+
 ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
 `}
       >
@@ -125,9 +136,15 @@ ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
           className="
 flex-1
 overflow-y-auto
+
 px-3
-py-4
-space-y-6
+py-5
+
+space-y-7
+
+scrollbar-thin
+scrollbar-thumb-border
+scrollbar-track-transparent
 "
         >
           {groups.map((group) => (
@@ -142,12 +159,14 @@ space-y-6
           ))}
         </nav>
 
-        <SidebarFooter
-          collapsed={collapsed}
-          firstName={user?.first_name}
-          lastName={user?.last_name}
-          email={user?.email}
-        />
+        <div className="border-t border-border/60 p-3">
+          <SidebarFooter
+            collapsed={collapsed}
+            firstName={user?.first_name}
+            lastName={user?.last_name}
+            email={user?.email}
+          />
+        </div>
       </aside>
     </>
   );

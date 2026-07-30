@@ -113,35 +113,14 @@ export default function Navbar() {
           <Link href="/pricing" className={linkClass("/pricing")}>
             Packages
           </Link>
-          <Link href="/offers" className={linkClass("/offers")}>
-            Services
-          </Link>
+
           <Link href="/about" className={linkClass("/about")}>
             About Us
           </Link>
           <Link href="/blogs" className={linkClass("/blogs")}>
             Blogs
           </Link>
-
-          {/* ================= ADMIN ACCESS ================= */}
-          {dashboardLink && (
-            <Link
-              href={dashboardLink.href}
-              className={dashboardLink.desktopClass}
-            >
-              {dashboardLink.title}
-
-              <span className="ml-2 text-xs opacity-70">
-                {dashboardLink.subtitle}
-              </span>
-            </Link>
-          )}
         </nav>
-
-        {/* ================= RIGHT SIDE ================= */}
-        <div className="hidden md:flex items-center gap-4 ml-auto">
-          <UserButton />
-        </div>
 
         {/* ================= MOBILE ================= */}
         <div className="md:hidden flex items-center gap-3">
@@ -173,14 +152,6 @@ export default function Navbar() {
             </Link>
 
             <Link
-              href="/offers"
-              onClick={closeMenu}
-              className={linkClass("/offers")}
-            >
-              Services
-            </Link>
-
-            <Link
               href="/about"
               onClick={closeMenu}
               className={linkClass("/about")}
@@ -195,20 +166,6 @@ export default function Navbar() {
             >
               Blogs
             </Link>
-
-            {dashboardLink && (
-              <Link
-                href={dashboardLink.href}
-                onClick={closeMenu}
-                className={dashboardLink.mobileClass}
-              >
-                {dashboardLink.title}
-
-                <span className="text-xs opacity-60">
-                  {dashboardLink.subtitle}
-                </span>
-              </Link>
-            )}
           </div>
         </div>
       )}

@@ -22,6 +22,7 @@ export default function ResultsTable({
   attempts,
   onViewAttempt,
 }: ResultsTableProps) {
+  console.log("ResultsTable attempts", attempts);
   if (attempts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-16">
@@ -46,8 +47,6 @@ export default function ResultsTable({
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[260px]">Student</TableHead>
-
-              <TableHead className="w-[120px]">Answered</TableHead>
 
               <TableHead className="min-w-[220px]">Score</TableHead>
 

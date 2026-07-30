@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 import { SidebarGroup } from "./types";
-import { getClassChildren, getResultChildren } from "./class-nav";
+import { getClassChildren } from "./class-nav";
 
 export function getSidebarNavigation(
   classId?: string,
@@ -32,6 +32,17 @@ export function getSidebarNavigation(
             label: "Dashboard",
             href: "/student",
             icon: LayoutDashboard,
+            exact: true,
+          },
+          {
+            label: "CBT",
+            icon: GraduationCap,
+            href: "/student/cbt",
+
+            children: [
+              { label: "Take CBT", href: "/student/cbt", exact: true },
+              { label: "view Results", href: "/student/cbt/history" },
+            ],
           },
           {
             label: "Attendance",
@@ -60,6 +71,7 @@ export function getSidebarNavigation(
             label: "Dashboard",
             href: "/teacher",
             icon: LayoutDashboard,
+            exact: true,
           },
           {
             label: "Classes",
@@ -121,6 +133,7 @@ export function getSidebarNavigation(
             label: "Dashboard",
             href: "/school-admin",
             icon: LayoutDashboard,
+            exact: true,
           },
           {
             label: "CBT",
@@ -176,15 +189,9 @@ export function getSidebarNavigation(
           },
 
           {
-            label: "Sessions",
-            href: "/school-admin/sessions",
-            icon: Calendar,
-          },
-
-          {
-            label: "Terms",
-            href: "/school-admin/terms",
-            icon: CalendarDays,
+            label: "Lesson Notes",
+            href: "/school-admin/lessons",
+            icon: BookOpen,
           },
 
           {
@@ -207,6 +214,7 @@ export function getSidebarNavigation(
         title: "",
         items: [
           {
+            exact: true,
             label: "Dashboard",
             href: "/admin",
             icon: LayoutDashboard,
@@ -217,7 +225,17 @@ export function getSidebarNavigation(
             href: "/admin/schools",
             icon: School,
           },
+          {
+            label: "Sessions",
+            href: "/admin/sessions",
+            icon: Calendar,
+          },
 
+          {
+            label: "Terms",
+            href: "/admin/terms",
+            icon: CalendarDays,
+          },
           {
             label: "Admins",
             href: "/admin/admins",

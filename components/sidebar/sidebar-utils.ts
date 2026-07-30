@@ -6,12 +6,14 @@ export const dashboardRoutes = [
   "/admin",
 ];
 
-export function isSidebarRouteActive(pathname: string, href: string) {
-  // Dashboard pages only match exactly
-  if (dashboardRoutes.includes(href)) {
+export function isSidebarRouteActive(
+  pathname: string,
+  href: string,
+  exact = false,
+) {
+  if (exact) {
     return pathname === href;
   }
 
-  // Every other page supports nested routes
   return pathname === href || pathname.startsWith(`${href}/`);
 }

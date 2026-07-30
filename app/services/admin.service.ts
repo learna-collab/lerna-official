@@ -1,4 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { api } from "@/lib/api";
+
 export interface CreateSchoolPayload {
   // ==========================
   // SCHOOL
@@ -22,18 +25,53 @@ export interface CreateSchoolPayload {
   admin_password: string;
 }
 
-import { api } from "@/lib/api";
+// ==========================================
+// ACADEMIC TYPES
+// ==========================================
+
+export interface SessionPayload {
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface SessionResponse extends SessionPayload {
+  id: string;
+  is_active: boolean;
+}
+
+export interface TermPayload {
+  name: string;
+  sort_order?: number;
+}
+
+export interface TermResponse extends TermPayload {
+  id: string;
+  is_active: boolean;
+}
 
 export const AdminService = {
+  // ==========================================
+  // SCHOOLS
+  // ==========================================
+
   createSchool: async (payload: CreateSchoolPayload) => {
     const { data } = await api.post("/admin/schools", payload);
 
     return data;
   },
 
-  // ==========================================
-  // DASHBOARD
-  // ==========================================
+  getSchools: async () => {
+    const { data } = await api.get("/admin/schools");
+
+    return data;
+  },
+
+  deleteSchool: async (schoolId: string) => {
+    const { data } = await api.delete(`/admin/schools/${schoolId}`);
+
+    return data;
+  },
 
   disableSchool: async (schoolId: string) => {
     const { data } = await api.patch(`/admin/schools/${schoolId}/disable`);
@@ -47,8 +85,13 @@ export const AdminService = {
     return data;
   },
 
+  // ==========================================
+  // DASHBOARD
+  // ==========================================
+
   getStats: async () => {
     const { data } = await api.get("/admin/stats");
+
     return data;
   },
 
@@ -58,6 +101,7 @@ export const AdminService = {
 
   getAdmins: async () => {
     const { data } = await api.get("/admin/admins");
+
     return data;
   },
 
@@ -101,75 +145,120 @@ export const AdminService = {
 
   getUsers: async () => {
     const { data } = await api.get("/users");
+
     return data;
   },
 
   getUser: async (userId: string) => {
     const { data } = await api.get(`/users/${userId}`);
+
     return data;
   },
 
   deleteUser: async (userId: string) => {
     const { data } = await api.delete(`/users/${userId}`);
-    return data;
-  },
-
-  // ==========================================
-  // SCHOOLS
-  // ==========================================
-
-  getSchools: async () => {
-    const { data } = await api.get("/admin/schools");
-    return data;
-  },
-
-  /**
-   * Backend route:
-   * DELETE /admin/{school_id}
-   */
-  deleteSchool: async (schoolId: string) => {
-    const { data } = await api.delete(`/admin/schools/${schoolId}`);
 
     return data;
   },
 
   // ==========================================
-  // LESSONS
+  // SUPER ADMIN ACADEMIC - SESSIONS
   // ==========================================
 
-  createLesson: async (payload: any) => {
-    const { data } = await api.post("/admin/lessons", payload);
+  getSessions: async (): Promise<SessionResponse[]> => {
+    const { data } = await api.get("/super-admin/academic/sessions");
 
     return data;
   },
 
-  updateLesson: async (lessonId: string, payload: any) => {
-    const { data } = await api.patch(`/admin/lessons/${lessonId}`, payload);
+  createSession: async (payload: SessionPayload): Promise<SessionResponse> => {
+    const { data } = await api.post("/super-admin/academic/sessions", payload);
 
     return data;
   },
 
-  getLessons: async () => {
-    const { data } = await api.get("/admin/lessons");
+  updateSession: async (
+    sessionId: string,
+    payload: SessionPayload,
+  ): Promise<SessionResponse> => {
+    const { data } = await api.put(
+      `/super-admin/academic/sessions/${sessionId}`,
+      payload,
+    );
 
     return data;
   },
 
-  getLesson: async (lessonId: string) => {
-    const { data } = await api.get(`/admin/lessons/${lessonId}`);
+  activateSession: async (sessionId: string): Promise<SessionResponse> => {
+    const { data } = await api.patch(
+      `/super-admin/academic/sessions/${sessionId}/activate`,
+    );
 
     return data;
   },
 
-  searchLessons: async (params: {
-    class_name: string;
-    subject_name: string;
-    session_name: string;
-    term_name: string;
-  }) => {
-    const { data } = await api.get("/admin/lessons/search", {
-      params,
-    });
+  deactivateSession: async (sessionId: string): Promise<SessionResponse> => {
+    const { data } = await api.patch(
+      `/super-admin/academic/sessions/${sessionId}/deactivate`,
+    );
+
+    return data;
+  },
+
+  deleteSession: async (sessionId: string) => {
+    const { data } = await api.delete(
+      `/super-admin/academic/sessions/${sessionId}`,
+    );
+
+    return data;
+  },
+
+  // ==========================================
+  // SUPER ADMIN ACADEMIC - TERMS
+  // ==========================================
+
+  getTerms: async (): Promise<TermResponse[]> => {
+    const { data } = await api.get("/super-admin/academic/terms");
+
+    return data;
+  },
+
+  createTerm: async (payload: TermPayload): Promise<TermResponse> => {
+    const { data } = await api.post("/super-admin/academic/terms", payload);
+
+    return data;
+  },
+
+  updateTerm: async (
+    termId: string,
+    payload: TermPayload,
+  ): Promise<TermResponse> => {
+    const { data } = await api.put(
+      `/super-admin/academic/terms/${termId}`,
+      payload,
+    );
+
+    return data;
+  },
+
+  activateTerm: async (termId: string): Promise<TermResponse> => {
+    const { data } = await api.patch(
+      `/super-admin/academic/terms/${termId}/activate`,
+    );
+
+    return data;
+  },
+
+  deactivateTerm: async (termId: string): Promise<TermResponse> => {
+    const { data } = await api.patch(
+      `/super-admin/academic/terms/${termId}/deactivate`,
+    );
+
+    return data;
+  },
+
+  deleteTerm: async (termId: string) => {
+    const { data } = await api.delete(`/super-admin/academic/terms/${termId}`);
 
     return data;
   },

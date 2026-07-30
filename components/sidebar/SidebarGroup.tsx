@@ -33,7 +33,7 @@ export default function SidebarGroup({
         const itemExpanded =
           expandedItems[item.label] ??
           item.children?.some((child) =>
-            isSidebarRouteActive(pathname, child.href),
+            isSidebarRouteActive(pathname, child.href, child.exact),
           ) ??
           false;
 

@@ -4,13 +4,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 
 import { AuthService } from "@/app/services/auth.service";
 import { useAuthStore } from "@/app/store/auth-store";
-
-import AuthLayout from "./auth-layout";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,160 +23,259 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type Role = "STUDENT" | "TEACHER" | "PARENT" | "ADMIN";
+type Role = "STUDENT" | "TEACHER" | "PARENT" | "SCHOOL_ADMIN";
 
 export default function LoginForm() {
   const router = useRouter();
 
   const [role, setRole] = useState<Role>("STUDENT");
-  const [identifier, setIdentifier] = useState("");
+
+  const [username, setUsername] = useState("");
+
   const [password, setPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
+
   const [error, setError] = useState("");
 
-  async function submit() {
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+
     try {
       setLoading(true);
       setError("");
 
-      const result = await AuthService.login(identifier, password);
+      const result = await AuthService.login(username, password);
 
       useAuthStore.setState({
         user: result.user,
+
         accessToken: result.access_token,
       });
 
       if (!result.user.profile_completed) {
         router.replace("/complete-profile");
+
         return;
       }
 
       switch (result.user.role) {
         case "STUDENT":
           router.replace("/student");
+
           break;
 
         case "TEACHER":
           router.replace("/teacher");
+
           break;
 
         case "PARENT":
           router.replace("/parent");
+
           break;
 
         case "SCHOOL_ADMIN":
           router.replace("/school-admin");
+
           break;
 
         default:
           router.replace("/admin");
       }
     } catch (error: any) {
-      if (!error?.response) {
-        setError("Server unavailable. Please try again later.");
-        return;
-      }
-
-      setError(error?.response?.data?.detail || "Login failed");
+      setError(error?.response?.data?.detail || "Invalid username or password");
     } finally {
       setLoading(false);
     }
   }
 
-  const isAdmin = role === "ADMIN";
-
   return (
-    <AuthLayout>
-      <div className="mx-auto w-full max-w-lg">
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-xl lg:p-10">
-          {/* Header */}
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Welcome Back
+    <main
+      className="
+        flex
+        min-h-screen
+        items-center
+        justify-center
+        bg-gradient-to-br
+        from-slate-900
+        via-blue-950
+        to-blue-900
+        px-6
+      "
+    >
+      <div className="w-full max-w-md">
+        {/* BRAND */}
+
+        <div className="mb-8 flex items-center justify-center gap-4 text-white">
+          <div
+            className="
+      flex
+      h-20
+      w-20
+      items-center
+      justify-center
+      rounded-2xl
+      p-2
+      ring-2
+      bg-white/10 backdrop-blur border border-white/20 shadow-lg
+    "
+          >
+            <Image
+              src="/logo.png"
+              alt="School Logo"
+              width={65}
+              height={65}
+              className="
+        h-14
+        w-14
+        object-contain
+      "
+              priority
+            />
+          </div>
+
+          <div className="text-left">
+            <h1
+              className="
+        text-3xl
+        font-bold
+        leading-tight
+      "
+            >
+              School Portal
             </h1>
 
-            <p className="mt-2 text-slate-500">
-              Sign in to your school portal.
-            </p>
-          </div>
-
-          {/* Role */}
-          <div className="mb-6 space-y-2">
-            <Label>Login As</Label>
-
-            <Select
-              value={role}
-              onValueChange={(value) => setRole(value as Role)}
+            <div
+              className="
+        mt-1
+        flex
+        items-center
+        gap-2
+      "
             >
-              <SelectTrigger className="h-12 rounded-xl">
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
+              <span
+                className="
+          h-1.5
+          w-1.5
+          rounded-full
+          bg-blue-400
+        "
+              />
 
-              <SelectContent>
-                <SelectItem value="STUDENT">Student</SelectItem>
-                <SelectItem value="TEACHER">Teacher</SelectItem>
-                <SelectItem value="PARENT">Parent</SelectItem>
-                <SelectItem value="ADMIN">Administrator</SelectItem>
-              </SelectContent>
-            </Select>
+              <p
+                className="
+          text-sm
+          font-medium
+          text-blue-200
+        "
+              >
+                Digital Learning System
+              </p>
+            </div>
           </div>
+        </div>
 
-          {/* Username Hint */}
-          {!isAdmin && (
-            <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-              <p className="text-sm font-medium text-blue-700">
-                Username Format
-              </p>
+        {/* LOGIN CARD */}
 
-              <p className="mt-1 font-semibold text-blue-900">
-                schoolSlug_username
-              </p>
+        <form
+          onSubmit={submit}
+          className="
+            rounded-3xl
+            bg-white
+            p-8
+            shadow-2xl
+          "
+        >
+          <div className="space-y-6">
+            {/* ROLE */}
 
-              <p className="mt-2 text-sm text-blue-600">
-                Example:
-                <span className="ml-1 rounded bg-white px-2 py-1 font-mono">
-                  lerna_john
-                </span>
-              </p>
-            </div>
-          )}
-
-          {/* Error */}
-          {error && (
-            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-5">
-            {/* Username / Email */}
             <div className="space-y-2">
-              <Label htmlFor="identifier">
-                {isAdmin ? "Email Address" : "Username"}
-              </Label>
+              <Label>Login As</Label>
+
+              <Select
+                value={role}
+                onValueChange={(value) => setRole(value as Role)}
+              >
+                <SelectTrigger
+                  className="
+                    h-12
+                    rounded-xl
+                  "
+                >
+                  <SelectValue />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value="STUDENT">Student</SelectItem>
+
+                  <SelectItem value="TEACHER">Teacher</SelectItem>
+
+                  <SelectItem value="PARENT">Parent</SelectItem>
+
+                  <SelectItem value="SCHOOL_ADMIN">Administrator</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* ERROR */}
+
+            {error && (
+              <div
+                className="
+                    rounded-xl
+                    border
+                    border-red-200
+                    bg-red-50
+                    px-4
+                    py-3
+                    text-sm
+                    text-red-600
+                  "
+              >
+                {error}
+              </div>
+            )}
+
+            {/* USERNAME */}
+
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
 
               <Input
-                id="identifier"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                placeholder={
-                  isAdmin ? "admin@school.com" : "schoolslug_username"
-                }
-                className="h-12 rounded-xl"
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                className="
+                  h-12
+                  rounded-xl
+                "
               />
             </div>
 
-            {/* Password */}
+            {/* PASSWORD */}
+
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div
+                className="
+                  flex
+                  items-center
+                  justify-between
+                "
+              >
                 <Label htmlFor="password">Password</Label>
 
                 <Link
                   href="/forgot-password"
-                  className="text-sm font-medium text-brand-blue hover:underline"
+                  className="
+                    text-sm
+                    font-medium
+                    text-blue-600
+                    hover:underline
+                  "
                 >
                   Forgot Password?
                 </Link>
@@ -190,49 +288,101 @@ export default function LoginForm() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="h-12 rounded-xl pr-12"
+                  className="
+                    h-12
+                    rounded-xl
+                    pr-12
+                  "
                 />
 
                 <button
                   type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-700"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="
+                    absolute
+                    right-4
+                    top-1/2
+                    -translate-y-1/2
+                    text-slate-500
+                    hover:text-blue-600
+                  "
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
 
-            {/* Login Button */}
+            {/* BUTTON */}
+
             <Button
-              onClick={submit}
+              type="submit"
               disabled={loading}
-              className="mt-2 h-12 w-full rounded-xl bg-brand-blue text-base font-semibold hover:bg-brand-blue/90"
+              className="
+                h-12
+                w-full
+                rounded-xl
+                bg-blue-600
+                text-base
+                font-semibold
+                hover:bg-blue-700
+              "
             >
               {loading ? "Signing In..." : "Sign In"}
             </Button>
           </div>
 
-          {/* Footer */}
-          <div className="mt-8 border-t pt-6 text-center">
-            <p className="text-sm text-slate-600">Dont have an account?</p>
+          {/* REGISTER */}
+
+          <div
+            className="
+              mt-8
+              border-t
+              pt-6
+              text-center
+            "
+          >
+            <p
+              className="
+                text-sm
+                text-slate-500
+              "
+            >
+              Need a school portal?
+            </p>
 
             <a
               href="https://forms.gle/zGFNu9539FcPUcWB6"
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 inline-flex h-11 items-center justify-center rounded-xl bg-brand-blue px-6 text-sm font-semibold text-white transition hover:bg-brand-blue/90"
+              className="
+                mt-3
+                inline-flex
+                rounded-xl
+                bg-blue-600
+                px-6
+                py-3
+                text-sm
+                font-semibold
+                text-white
+                hover:bg-blue-700
+              "
             >
-              Register
+              Register School
             </a>
 
-            <p className="mt-3 text-xs text-slate-500">
-              Complete the application form and our team will create your
-              school&apos;s portal and send your administrator login details.
+            <p
+              className="
+                mt-3
+                text-xs
+                text-slate-500
+              "
+            >
+              Submit your school application and receive administrator access
+              details.
             </p>
           </div>
-        </div>
+        </form>
       </div>
-    </AuthLayout>
+    </main>
   );
 }
