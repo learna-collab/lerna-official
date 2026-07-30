@@ -319,22 +319,6 @@ export default function ExamQuestionsPage() {
 
                 <p className="mt-2 text-lg font-semibold">{exam.total_marks}</p>
               </div>
-
-              <div>
-                <p className="text-sm text-muted-foreground">Start Date</p>
-
-                <p className="mt-2 font-medium">
-                  {new Date(exam.starts_at).toLocaleString()}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-sm text-muted-foreground">End Date</p>
-
-                <p className="mt-2 font-medium">
-                  {new Date(exam.ends_at).toLocaleString()}
-                </p>
-              </div>
             </div>
 
             <Separator />
