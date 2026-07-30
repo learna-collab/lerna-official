@@ -42,10 +42,10 @@ function formatDate(date?: string | null) {
 }
 
 function duration(attempt: Attempt) {
-  if (!attempt.completed_at) return "--";
+  if (!attempt.submitted_at) return "--";
 
   const start = new Date(attempt.started_at).getTime();
-  const end = new Date(attempt.completed_at).getTime();
+  const end = new Date(attempt.submitted_at).getTime();
 
   const mins = Math.floor((end - start) / 60000);
 
@@ -98,7 +98,7 @@ export default function AttemptDetailsDialog({
                   Admission No: {attempt.student?.admission_number ?? "--"}
                 </p>
 
-                <StatusBadge passed={attempt.passed} />
+                <StatusBadge passed={attempt.is_passed} />
               </div>
             </div>
           </CardContent>
@@ -175,7 +175,7 @@ export default function AttemptDetailsDialog({
                 <p className="text-sm text-muted-foreground">Result</p>
 
                 <h3 className="text-lg font-semibold">
-                  {attempt.passed ? "Passed" : "Failed"}
+                  {attempt.is_passed ? "Passed" : "Failed"}
                 </h3>
               </div>
             </CardContent>
@@ -211,7 +211,7 @@ export default function AttemptDetailsDialog({
                 <p className="font-medium">Submitted Examination</p>
 
                 <p className="text-sm text-muted-foreground">
-                  {formatDate(attempt.completed_at)}
+                  {formatDate(attempt.submitted_at)}
                 </p>
               </div>
             </div>
