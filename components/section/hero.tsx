@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 
 export default function Hero() {
   return (
@@ -70,7 +71,8 @@ export default function Hero() {
           </div>
 
           {/* CTA */}
-          <div className="mt-12">
+          <div className="mt-12 space-y-6">
+            {/* Primary CTA */}
             <a
               href="/pricing"
               target="_blank"
@@ -99,6 +101,30 @@ export default function Hero() {
                 </svg>
               </span>
             </a>
+
+            {/* School Portal CTA */}
+            <div className="max-w-xl rounded-3xl border border-brand-blue/10 bg-white/80 p-6 shadow-sm backdrop-blur-xl">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-brand-black">
+                    Lerna School Portal
+                  </h3>
+
+                  <p className="mt-1 text-sm leading-6 text-black/60">
+                    Access your school management dashboard, results,
+                    attendance, lesson notes, and administrative tools in one
+                    secure portal.
+                  </p>
+                </div>
+
+                <Link
+                  href="/schoolportal"
+                  className="inline-flex items-center justify-center rounded-full bg-brand-orange px-5 py-3 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-orange/90 hover:shadow-lg"
+                >
+                  Open Portal
+                </Link>
+              </div>
+            </div>
           </div>
 
           {/* PAIN POINTS */}
