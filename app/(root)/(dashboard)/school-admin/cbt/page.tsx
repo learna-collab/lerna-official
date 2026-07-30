@@ -278,24 +278,6 @@ export default function CBTDashboardPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Start</span>
-
-                      <span className="font-medium">
-                        {new Date(exam.starts_at).toLocaleDateString()}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">End</span>
-
-                      <span className="font-medium">
-                        {new Date(exam.ends_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-
                   <Button className="w-full" variant="outline" asChild>
                     <Link href={`/school-admin/cbt/exams/${exam.id}`}>
                       Manage Examination
