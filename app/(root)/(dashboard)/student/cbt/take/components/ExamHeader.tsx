@@ -12,9 +12,6 @@ interface ExamHeaderProps {
 }
 
 export default function ExamHeader({ exam }: ExamHeaderProps) {
-  const startsAt = new Date(exam.starts_at).toLocaleString();
-  const endsAt = new Date(exam.ends_at).toLocaleString();
-
   return (
     <div className="space-y-6 rounded-xl border bg-background p-6 shadow-sm">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -84,10 +81,6 @@ export default function ExamHeader({ exam }: ExamHeaderProps) {
 
           <div>
             <p className="text-xs text-muted-foreground">Available</p>
-
-            <p className="text-sm font-medium">{startsAt}</p>
-
-            <p className="text-xs text-muted-foreground">until {endsAt}</p>
           </div>
         </div>
       </div>
