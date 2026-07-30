@@ -35,6 +35,7 @@ import {
 import { Input } from "@/components/ui/input";
 
 import { useClassContext } from "@/components/sidebar/ClassContext";
+import { AcademicSetupService } from "@/app/services/academicSetup.service";
 
 /* ============================================================
  * TYPES
@@ -107,36 +108,25 @@ export default function ClassResultsPage() {
 
   const canPublish = hasBatch && isApproved;
 
-  const normalize = (response: any) => {
-    if (Array.isArray(response)) return response;
-
-    if (Array.isArray(response.data)) return response.data;
-
-    if (Array.isArray(response.sessions)) return response.sessions;
-
-    if (Array.isArray(response.terms)) return response.terms;
-
-    if (Array.isArray(response.data?.sessions)) return response.data.sessions;
-
-    if (Array.isArray(response.data?.terms)) return response.data.terms;
-
-    return [];
-  };
-
   /* ============================================================
    * LOAD FILTERS
    * ============================================================ */
 
   async function loadFilters() {
     try {
-      const [sessionsRes, termsRes] = await Promise.all([
-        SchoolAdminService.getSessions(),
-        SchoolAdminService.getTerms(),
-      ]);
+      const options = await AcademicSetupService.getAcademicPeriodOptions();
 
-      setSessions(normalize(sessionsRes));
+      setSessions(options.sessions);
+      setTerms(options.terms);
 
-      setTerms(normalize(termsRes));
+      // Optional: preselect first available values
+      if (options.sessions.length > 0) {
+        setSessionId(options.sessions[0].id);
+      }
+
+      if (options.terms.length > 0) {
+        setTermId(options.terms[0].id);
+      }
     } catch (error) {
       console.error(error);
 
