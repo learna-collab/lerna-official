@@ -297,38 +297,6 @@ export default function ExamDetailsPage() {
                     </div>
                   </div>
                 </div>
-
-                <div className="rounded-xl border">
-                  <div className="flex items-center gap-3 border-b p-4">
-                    <CalendarDays className="h-5 w-5 text-primary" />
-
-                    <span className="font-medium">Examination Schedule</span>
-                  </div>
-
-                  <div className="space-y-5 p-5">
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Start Time
-                      </p>
-
-                      <p className="mt-1 font-medium">
-                        {exam?.starts_at
-                          ? new Date(exam.starts_at).toLocaleString()
-                          : "-"}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-muted-foreground">End Time</p>
-
-                      <p className="mt-1 font-medium">
-                        {exam?.ends_at
-                          ? new Date(exam.ends_at).toLocaleString()
-                          : "-"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           )}
