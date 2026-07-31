@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
 import DeleteBlogButton from "@/components/admin/delete-blog-button";
