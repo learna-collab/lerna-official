@@ -1,9 +1,8 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
 import { BlogService } from "@/app/services/blog.services";
-
-// Prevent static generation from failing during build
-export const dynamic = "force-dynamic";
 
 export default async function FeaturedPosts() {
   let posts: any[] = [];
