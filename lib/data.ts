@@ -2,19 +2,19 @@ export const schoolServices = [
   {
     id: "access-to-systems",
     title: "Access to Systems",
-    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
+    image: "/IMG-20260730-WA0019.jpg",
   },
 
   {
     id: "access-to-resources",
     title: "Access to Resources",
-    image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644",
+    image: "/IMG-20260730-WA0021.jpg",
   },
 
   {
     id: "access-to-finance",
     title: "Access to Finance",
-    image: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e",
+    image: "/IMG-20260730-WA0023.jpg",
   },
 ];
 
@@ -22,20 +22,19 @@ export const schoolExtraServices = [
   {
     id: "school-website-design",
     title: "School Website Design",
-    image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6",
+    image: "/IMG-20260730-WA0022.jpg",
   },
 
   {
     id: "social-media-management",
     title: "Social Media Management",
-    image:
-      "https://images.unsplash.com/photo-1611926653458-09294b3142bf?auto=format&fit=crop&w=1200&q=80",
+    image: "/IMG-20260730-WA0026.jpg",
   },
 
   {
     id: "dedicated-supervisory-support",
     title: "Dedicated Supervisory Support",
-    image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f",
+    image: "/IMG-20260730-WA0018.jpg",
   },
 ];
 
@@ -43,20 +42,19 @@ export const individualServices = [
   {
     id: "career-guidance",
     title: "Career Guidance & Mentorship",
-    image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644",
+    image: "/IMG-20260730-WA0026.jpg",
   },
 
   {
     id: "scholarship-support",
     title: "Scholarship & Admission Support",
-    image:
-      "https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?auto=format&fit=crop&w=1600&q=80",
+    image: "/IMG-20260730-WA0027.jpg",
   },
 
   {
     id: "skills-development",
     title: "Skills Development & Certifications",
-    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
+    image: "/IMG-20260730-WA0020.jpg",
   },
 ];
 
@@ -64,19 +62,19 @@ export const individualExtraServices = [
   {
     id: "study-abroad-advisory",
     title: "Study Abroad Advisory",
-    image: "https://images.unsplash.com/photo-1488646953014-85cb44e25828",
+    image: "/IMG-20260730-WA0026.jpg",
   },
 
   {
     id: "digital-literacy",
     title: "Digital Literacy Training",
-    image: "https://images.unsplash.com/photo-1516321165247-4aa89a48be28",
+    image: "/IMG-20260730-WA0027.jpg",
   },
 
   {
     id: "entrepreneurship-support",
     title: "Entrepreneurship Support",
-    image: "https://images.unsplash.com/photo-1552664730-d307ca884978",
+    image: "/IMG-20260730-WA0019.jpg",
   },
 ];
 export const bundles = [
