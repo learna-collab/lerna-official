@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
 import { BlogService } from "@/app/services/blog.services";
