@@ -124,8 +124,6 @@ export default function Navbar() {
 
         {/* ================= MOBILE ================= */}
         <div className="md:hidden flex items-center gap-3">
-          <UserButton />
-
           <button
             className="text-white"
             onClick={() => setOpen((prev) => !prev)}
