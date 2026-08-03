@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
+import { CheckCircle2, ImagePlus, Sparkles, Trash2 } from "lucide-react";
 
 import { uploadImage } from "./image-upload";
 import RichEditor from "./rich-editor";
@@ -46,6 +47,34 @@ export default function BlogForm({ blog }: Props) {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  const plainText = useMemo(() => {
+    return content
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }, [content]);
+
+  const wordCount = useMemo(() => {
+    return plainText ? plainText.split(" ").length : 0;
+  }, [plainText]);
+
+  const readingMinutes = useMemo(() => {
+    return Math.max(1, Math.ceil(wordCount / 200));
+  }, [wordCount]);
+
+  const completionScore = useMemo(() => {
+    let score = 0;
+
+    if (title.trim().length >= 10) score += 20;
+    if (excerpt.trim().length >= 40) score += 20;
+    if (plainText.length >= 300) score += 30;
+    if (coverImage) score += 10;
+    if (seoTitle.trim().length >= 20) score += 10;
+    if (seoDescription.trim().length >= 50) score += 10;
+
+    return score;
+  }, [title, excerpt, plainText, coverImage, seoTitle, seoDescription]);
+
   const handleImageUpload = async (file: File) => {
     const toastId = toast.loading("Uploading image...");
 
@@ -57,29 +86,58 @@ export default function BlogForm({ blog }: Props) {
       setCoverImage(result.url);
       setCoverImageId(result.public_id);
 
-      toast.success("Image uploaded", { id: toastId });
+      toast.success("Cover image uploaded successfully", { id: toastId });
     } catch (err) {
-      toast.error("Upload failed", { id: toastId });
+      console.error(err);
+      toast.error("Image upload failed", { id: toastId });
     } finally {
       setUploading(false);
     }
   };
 
   async function handleSubmit() {
-    const toastId = toast.loading("Publishing blog...");
+    if (!title.trim()) {
+      toast.error("Please enter a blog title");
+      return;
+    }
+
+    if (title.trim().length < 10) {
+      toast.error("Blog title should be at least 10 characters");
+      return;
+    }
+
+    if (!excerpt.trim()) {
+      toast.error("Please enter a short summary");
+      return;
+    }
+
+    if (excerpt.trim().length < 40) {
+      toast.error("Summary should be at least 40 characters");
+      return;
+    }
+
+    if (!plainText || plainText.length < 300) {
+      toast.error("Blog content should be at least 300 characters");
+      return;
+    }
+
+    const toastId = toast.loading(
+      blog ? "Updating article..." : "Publishing article...",
+    );
+
     setLoading(true);
 
     try {
       const payload = {
-        title,
-        excerpt,
+        title: title.trim(),
+        excerpt: excerpt.trim(),
         content,
-        coverImage,
-        coverImageId,
+        coverImage: coverImage || null,
+        coverImageId: coverImageId || null,
         published,
         featured,
-        seoTitle,
-        seoDescription,
+        seoTitle: seoTitle.trim(),
+        seoDescription: seoDescription.trim(),
       };
 
       if (blog) {
@@ -88,144 +146,379 @@ export default function BlogForm({ blog }: Props) {
         await BlogService.createBlog(payload);
       }
 
-      toast.success("Blog saved", { id: toastId });
+      toast.success(
+        blog
+          ? "Article updated successfully"
+          : "Article published successfully",
+        {
+          id: toastId,
+        },
+      );
 
       router.push("/admin/blogs");
       router.refresh();
     } catch (err: any) {
-      toast.error(err?.message || "Failed to save blog", { id: toastId });
+      console.error(err);
+
+      toast.error(
+        err?.response?.data?.detail || err?.message || "Failed to save article",
+        { id: toastId },
+      );
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-6 py-10 space-y-10">
+    <div className="mx-auto max-w-5xl space-y-8">
       {/* HEADER */}
-      <div className="space-y-4">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Untitled blog..."
-          className="w-full text-4xl md:text-5xl font-bold outline-none bg-transparent placeholder:text-gray-300 tracking-tight"
-        />
+      <div className="rounded-3xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-6 shadow-sm">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+              <Sparkles className="h-4 w-4" />
+              Professional Article Editor
+            </div>
 
-        <textarea
-          value={excerpt}
-          onChange={(e) => setExcerpt(e.target.value)}
-          placeholder="Write a short summary..."
-          className="w-full text-lg text-gray-500 outline-none resize-none bg-transparent placeholder:text-gray-300"
-        />
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900">
+              {blog ? "Edit Blog Article" : "Create New Blog Article"}
+            </h2>
+
+            <p className="max-w-2xl text-sm text-gray-600">
+              Write clear, engaging, and professionally formatted content for
+              your readers. Use headings, lists, quotes, and images to improve
+              readability.
+            </p>
+          </div>
+
+          <div className="min-w-[240px] rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium text-gray-700">Article Quality</span>
+              <span className="font-semibold text-gray-900">
+                {completionScore}%
+              </span>
+            </div>
+
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100">
+              <div
+                className="h-full rounded-full bg-brand-blue transition-all duration-500"
+                style={{ width: `${completionScore}%` }}
+              />
+            </div>
+
+            <div className="mt-4 space-y-2 text-xs text-gray-600">
+              <div className="flex items-center justify-between">
+                <span>Words</span>
+                <span className="font-medium">{wordCount}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span>Reading time</span>
+                <span className="font-medium">{readingMinutes} min</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span>Status</span>
+                <span
+                  className={`font-medium ${
+                    published ? "text-green-600" : "text-amber-600"
+                  }`}
+                >
+                  {published ? "Published" : "Draft"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* TITLE + EXCERPT */}
+      <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">
+              Article Title
+            </label>
+
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Write a compelling headline that attracts readers"
+              className="w-full rounded-2xl border border-gray-200 px-5 py-4 text-3xl font-bold tracking-tight text-gray-900 outline-none transition focus:border-brand-blue focus:ring-4 focus:ring-blue-100 md:text-4xl"
+            />
+
+            <p className="text-xs text-gray-500">
+              Aim for 50-70 characters for best readability and SEO.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">
+              Summary / Excerpt
+            </label>
+
+            <textarea
+              value={excerpt}
+              onChange={(e) => setExcerpt(e.target.value)}
+              placeholder="Write a concise summary that appears in blog cards and search results"
+              rows={4}
+              className="w-full resize-none rounded-2xl border border-gray-200 px-5 py-4 text-base text-gray-700 outline-none transition focus:border-brand-blue focus:ring-4 focus:ring-blue-100"
+            />
+
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>Recommended: 120-180 characters</span>
+              <span>{excerpt.length} characters</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* COVER IMAGE */}
-      <div className="space-y-4 p-5 border rounded-2xl bg-white shadow-sm">
-        <label className="text-sm font-semibold text-gray-600">
-          Cover Image
-        </label>
+      <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Cover Image</h3>
+            <p className="text-sm text-gray-600">
+              Upload a high-quality landscape image (recommended 1600×900).
+            </p>
+          </div>
+        </div>
 
-        <input
-          type="file"
-          accept="image/*"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (file) await handleImageUpload(file);
-          }}
-          className="w-full text-sm border border-dashed rounded-xl p-4 cursor-pointer bg-gray-50 hover:bg-gray-100 transition"
-        />
+        <div className="mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 p-6 transition hover:border-brand-blue hover:bg-blue-50/30">
+          <div className="flex flex-col items-center justify-center gap-3 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm">
+              <ImagePlus className="h-7 w-7 text-gray-500" />
+            </div>
+
+            <div>
+              <p className="font-medium text-gray-800">Upload cover image</p>
+              <p className="text-sm text-gray-500">
+                JPG, PNG or WebP up to 5MB
+              </p>
+            </div>
+
+            <input
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (file) await handleImageUpload(file);
+              }}
+              className="w-full max-w-sm rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-blue file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-blue/90"
+            />
+          </div>
+        </div>
 
         {uploading && (
-          <p className="text-sm text-blue-500 animate-pulse">
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
             Uploading image...
-          </p>
+          </div>
         )}
 
         {coverImage && (
-          <div className="relative w-full max-w-md group">
-            <Image
-              src={coverImage}
-              alt="cover"
-              width={600}
-              height={350}
-              className="rounded-2xl object-cover border shadow-sm"
-            />
+          <div className="mt-6 overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+            <div className="relative aspect-[16/9] w-full">
+              <Image
+                src={coverImage}
+                alt="Cover preview"
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 960px"
+              />
+            </div>
 
-            <button
-              onClick={() => {
-                setCoverImage("");
-                setCoverImageId("");
-              }}
-              className="absolute top-3 right-3 bg-black/70 text-white px-3 py-1 rounded-full text-xs opacity-0 group-hover:opacity-100 transition"
-            >
-              Remove
-            </button>
+            <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
+              <div className="flex items-center gap-2 text-sm text-green-700">
+                <CheckCircle2 className="h-4 w-4" />
+                Cover image ready
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCoverImage("");
+                  setCoverImageId("");
+                }}
+                className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Remove
+              </button>
+            </div>
           </div>
         )}
       </div>
 
       {/* CONTENT */}
-      <div className="space-y-3 p-5 border rounded-2xl bg-white shadow-sm">
-        <label className="text-sm font-semibold text-gray-600">Content</label>
+      <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Article Content
+            </h3>
+            <p className="text-sm text-gray-600">
+              Use headings, lists, quotes, links, and images to create a
+              polished article.
+            </p>
+          </div>
 
-        <div className="rounded-xl border bg-gray-50 p-3 focus-within:ring-2 focus-within:ring-black/10">
-          <RichEditor value={content} onChange={setContent} />
+          <div className="rounded-xl bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700">
+            {wordCount} words
+          </div>
         </div>
+
+        <RichEditor value={content} onChange={setContent} />
       </div>
 
       {/* SEO */}
-      <div className="space-y-4 border-t pt-8">
-        <h3 className="text-sm font-semibold text-gray-600 tracking-wide">
-          SEO Settings
-        </h3>
+      <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="mb-5">
+          <h3 className="text-lg font-semibold text-gray-900">SEO Settings</h3>
+          <p className="text-sm text-gray-600">
+            Improve how your article appears in search engines and social
+            sharing.
+          </p>
+        </div>
 
-        <div className="space-y-3">
-          <input
-            value={seoTitle}
-            onChange={(e) => setSeoTitle(e.target.value)}
-            placeholder="SEO Title"
-            className="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-black/10 transition"
-          />
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">
+              SEO Title
+            </label>
 
-          <textarea
-            value={seoDescription}
-            onChange={(e) => setSeoDescription(e.target.value)}
-            placeholder="SEO Description"
-            className="w-full border rounded-xl p-3 h-28 outline-none focus:ring-2 focus:ring-black/10 transition"
-          />
+            <input
+              value={seoTitle}
+              onChange={(e) => setSeoTitle(e.target.value)}
+              placeholder="Optimized search engine title"
+              className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-brand-blue focus:ring-4 focus:ring-blue-100"
+            />
+
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>Recommended: 50-60 characters</span>
+              <span>{seoTitle.length}</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">
+              SEO Description
+            </label>
+
+            <textarea
+              value={seoDescription}
+              onChange={(e) => setSeoDescription(e.target.value)}
+              placeholder="Short description for search engines and social previews"
+              rows={4}
+              className="w-full resize-none rounded-2xl border border-gray-200 px-4 py-3 outline-none transition focus:border-brand-blue focus:ring-4 focus:ring-blue-100"
+            />
+
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>Recommended: 140-160 characters</span>
+              <span>{seoDescription.length}</span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Search Preview
+            </p>
+
+            <div className="mt-3 space-y-1">
+              <p className="text-lg font-medium text-blue-700">
+                {seoTitle || title || "Article title preview"}
+              </p>
+
+              <p className="text-sm text-green-700">lerna.ng/blogs/article</p>
+
+              <p className="text-sm text-gray-600">
+                {seoDescription ||
+                  excerpt ||
+                  "Your search engine description will appear here."}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* OPTIONS */}
-      <div className="flex flex-wrap gap-6 text-sm p-4 border rounded-xl bg-gray-50">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={published}
-            onChange={(e) => setPublished(e.target.checked)}
-            className="accent-black"
-          />
-          <span className="text-gray-700">Publish</span>
-        </label>
+      {/* PUBLISH OPTIONS */}
+      <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900">
+          Publishing Options
+        </h3>
 
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={featured}
-            onChange={(e) => setFeatured(e.target.checked)}
-            className="accent-black"
-          />
-          <span className="text-gray-700">Featured</span>
-        </label>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-brand-blue hover:bg-blue-50/30">
+            <input
+              type="checkbox"
+              checked={published}
+              onChange={(e) => setPublished(e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
+            />
+
+            <div>
+              <p className="font-medium text-gray-900">Publish immediately</p>
+              <p className="text-sm text-gray-600">
+                Make this article visible on the public website.
+              </p>
+            </div>
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-gray-200 p-4 transition hover:border-brand-blue hover:bg-blue-50/30">
+            <input
+              type="checkbox"
+              checked={featured}
+              onChange={(e) => setFeatured(e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
+            />
+
+            <div>
+              <p className="font-medium text-gray-900">Feature this article</p>
+              <p className="text-sm text-gray-600">
+                Show this article in featured sections across the site.
+              </p>
+            </div>
+          </label>
+        </div>
       </div>
 
-      {/* ACTION */}
-      <button
-        onClick={handleSubmit}
-        disabled={loading}
-        className="w-full md:w-auto px-8 py-3 rounded-xl bg-black text-white font-medium hover:bg-black/90 transition active:scale-[0.99] disabled:opacity-60"
-      >
-        {loading ? "Publishing..." : "Publish Blog"}
-      </button>
+      {/* ACTIONS */}
+      <div className="sticky bottom-4 z-20 rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-gray-600">
+            {published
+              ? "This article will be visible to readers immediately after saving."
+              : "This article will be saved as a draft until you publish it."}
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="inline-flex items-center justify-center rounded-xl border border-gray-300 px-5 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={loading || uploading}
+              className="inline-flex items-center justify-center rounded-xl bg-brand-blue px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-blue/90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading
+                ? blog
+                  ? "Updating..."
+                  : "Publishing..."
+                : blog
+                  ? "Update Article"
+                  : published
+                    ? "Publish Article"
+                    : "Save Draft"}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
