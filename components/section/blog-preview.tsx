@@ -12,7 +12,6 @@ export default async function FeaturedPosts() {
   try {
     const data = await BlogService.getFeaturedBlogs();
 
-    // Normalize response
     posts = Array.isArray(data)
       ? data
       : Array.isArray(data?.data)
@@ -20,8 +19,6 @@ export default async function FeaturedPosts() {
         : [];
   } catch (error) {
     console.error("Failed to load featured blogs:", error);
-
-    // Do not crash the page in production
     return null;
   }
 
@@ -30,14 +27,27 @@ export default async function FeaturedPosts() {
   return (
     <section className="bg-[#f8fafc] py-28">
       <div className="mx-auto max-w-7xl px-6">
-        <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-brand-blue">
-          Featured Articles
-        </p>
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-brand-blue">
+              Featured Articles
+            </p>
 
-        <h2 className="text-5xl font-bold tracking-tight text-gray-900">
-          Insights For School Leaders
-        </h2>
+            <h2 className="text-5xl font-bold tracking-tight text-gray-900">
+              Insights For School Leaders
+            </h2>
+          </div>
 
+          <Link
+            href="/blogs"
+            className="inline-flex items-center text-sm font-semibold text-brand-blue transition hover:underline"
+          >
+            See more articles →
+          </Link>
+        </div>
+
+        {/* Only the 3 most recent featured blogs */}
         <div className="mt-16 grid gap-8 md:grid-cols-3">
           {posts.map((post: any) => (
             <Link
@@ -84,6 +94,16 @@ export default async function FeaturedPosts() {
               </div>
             </Link>
           ))}
+        </div>
+
+        {/* Bottom CTA */}
+        <div className="mt-14 text-center">
+          <Link
+            href="/blogs"
+            className="inline-flex items-center justify-center rounded-full border border-brand-blue px-6 py-3 text-sm font-semibold text-brand-blue transition hover:bg-brand-blue hover:text-white"
+          >
+            See all blog articles
+          </Link>
         </div>
       </div>
     </section>
