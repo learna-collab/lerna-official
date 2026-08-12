@@ -32,11 +32,27 @@ import {
 type ClassOption = { id: string; name: string };
 type SubjectOption = { id: string; name: string };
 
+// UI labels mapped to backend values
+const LESSON_DAYS = [
+  { label: "Monday", value: "Day 1" },
+  { label: "Tuesday", value: "Day 2" },
+  { label: "Wednesday", value: "Day 3" },
+  { label: "Thursday", value: "Day 4" },
+  { label: "Friday", value: "Day 5" },
+];
+
+function getDayLabel(value: string) {
+  return LESSON_DAYS.find((d) => d.value === value)?.label ?? value;
+}
+
 export default function TeacherLessonsPage() {
   const [lessons, setLessons] = useState<LessonResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [weekNumber, setWeekNumber] = useState("");
+
+  // Keep backend value internally
+  const [lessonDay, setLessonDay] = useState("Day 1");
 
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [subjects, setSubjects] = useState<SubjectOption[]>([]);
@@ -111,7 +127,10 @@ export default function TeacherLessonsPage() {
         weekNumber: selectedWeek,
       });
 
-      setLessons(data);
+      // Filter by selected day on frontend
+      const filtered = data.filter((lesson) => lesson.lesson_day === lessonDay);
+
+      setLessons(filtered);
     } catch (error: any) {
       toast.error(error?.response?.data?.detail ?? "Failed to load lessons.");
     } finally {
@@ -145,7 +164,7 @@ export default function TeacherLessonsPage() {
     if (!academicLoading && sessionId && termId && classId && subjectId) {
       void Promise.resolve().then(() => loadLessons());
     }
-  }, [academicLoading, sessionId, termId, classId, subjectId]);
+  }, [academicLoading, sessionId, termId, classId, subjectId, lessonDay]);
 
   // =========================================================
   // FILTER ACTIONS
@@ -162,6 +181,7 @@ export default function TeacherLessonsPage() {
 
   function handleResetFilter() {
     setWeekNumber("");
+    setLessonDay("Day 1");
     void loadLessons();
   }
 
@@ -177,7 +197,8 @@ export default function TeacherLessonsPage() {
       </div>
 
       {/* Filters */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
+        {/* Class */}
         <div className="space-y-2">
           <Label>Class</Label>
 
@@ -196,6 +217,7 @@ export default function TeacherLessonsPage() {
           </Select>
         </div>
 
+        {/* Subject */}
         <div className="space-y-2">
           <Label>Subject</Label>
 
@@ -205,13 +227,40 @@ export default function TeacherLessonsPage() {
             disabled={!classId || subjects.length === 0}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select subject" />
+              <SelectValue
+                placeholder={
+                  classId
+                    ? subjects.length
+                      ? "Select subject"
+                      : "No subjects assigned"
+                    : "Select class first"
+                }
+              />
             </SelectTrigger>
 
             <SelectContent>
               {subjects.map((item) => (
                 <SelectItem key={item.id} value={item.id}>
                   {item.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Day */}
+        <div className="space-y-2">
+          <Label>Day</Label>
+
+          <Select value={lessonDay} onValueChange={setLessonDay}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select day" />
+            </SelectTrigger>
+
+            <SelectContent>
+              {LESSON_DAYS.map((day) => (
+                <SelectItem key={day.value} value={day.value}>
+                  {day.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -245,7 +294,7 @@ export default function TeacherLessonsPage() {
           lessons={lessons.map((lesson) => ({
             id: lesson.id,
             week_number: lesson.week_number,
-            lesson_day: lesson.lesson_day,
+            lesson_day: getDayLabel(lesson.lesson_day),
             class_name: lesson.class_name,
             subject_name: lesson.subject_name,
             topic: lesson.topic,

@@ -14,6 +14,7 @@ import {
   Loader2,
   Plus,
 } from "lucide-react";
+import { Upload } from "lucide-react";
 
 import { toast } from "sonner";
 
@@ -47,6 +48,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import QuestionCard from "../../components/QuestionCard";
 import QuestionForm from "../../components/QuestionForm";
+import BatchUploadDialog from "../../components/BatchUploadDialog";
 
 export default function ExamQuestionsPage() {
   const { examId } = useParams<{
@@ -66,6 +68,7 @@ export default function ExamQuestionsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [batchUploadOpen, setBatchUploadOpen] = useState(false);
 
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(
     null,
@@ -212,6 +215,10 @@ export default function ExamQuestionsPage() {
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Question
+          </Button>
+          <Button variant="outline" onClick={() => setBatchUploadOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Batch Upload
           </Button>
 
           <Button
@@ -439,6 +446,13 @@ export default function ExamQuestionsPage() {
 
           await loadExam();
         }}
+      />
+
+      <BatchUploadDialog
+        open={batchUploadOpen}
+        onOpenChange={setBatchUploadOpen}
+        examId={examId}
+        onUploaded={loadExam}
       />
 
       {/* ====================================================== */}

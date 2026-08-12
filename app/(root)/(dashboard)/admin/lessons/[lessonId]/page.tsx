@@ -2,16 +2,10 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  Download,
-  Trash2,
-  CheckCircle,
-  XCircle,
-} from "lucide-react";
+import { useParams } from "next/navigation";
+import { ArrowLeft, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -19,124 +13,169 @@ import {
   LessonResponse,
 } from "@/app/services/super-admin-lesson.service";
 
-import { LessonHeader } from "@/components/lessons/LessonHeader";
-import { LessonInfoCard } from "@/components/lessons/LessonInfoCard";
-import { ALFSectionCard } from "@/components/lessons/ALFSectionCard";
-
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { getDayLabel } from "@/lib/utils";
+
+type SectionItem = {
+  key: string;
+  title: string;
+  minutes: number;
+  content?: string | null;
+};
+
+function formatTime(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function RichSectionContent({ content }: { content?: string | null }) {
+  if (!content) {
+    return (
+      <p className="text-sm italic text-muted-foreground">
+        No content extracted for this section.
+      </p>
+    );
+  }
+
+  const isHtml = /<[a-z][\s\S]*>/i.test(content);
+
+  if (isHtml) {
+    return (
+      <div
+        className="prose prose-sm max-w-none prose-table:w-full prose-table:border-collapse prose-th:border prose-th:bg-gray-100 prose-th:p-2 prose-td:border prose-td:p-2 prose-ul:list-disc prose-ul:pl-6 prose-ol:list-decimal prose-ol:pl-6 prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg"
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+    );
+  }
+
+  return (
+    <div className="prose prose-sm max-w-none whitespace-pre-wrap leading-7">
+      {content}
+    </div>
+  );
+}
 
 export default function SuperAdminLessonDetailPage() {
   const params = useParams();
-
-  const router = useRouter();
-
   const lessonId = params.lessonId as string;
 
   const [lesson, setLesson] = useState<LessonResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [publishing, setPublishing] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
-  async function loadLesson() {
-    try {
-      setLoading(true);
-
-      const data = await SuperAdminLessonService.getLesson(lessonId);
-
-      setLesson(data);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail ?? "Failed to load lesson.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(0);
 
   useEffect(() => {
-    if (lessonId) {
-      void Promise.resolve().then(() => loadLesson());
+    async function loadLesson() {
+      try {
+        setLoading(true);
+        const data = await SuperAdminLessonService.getLesson(lessonId);
+        setLesson(data);
+      } catch (error: any) {
+        toast.error(error?.response?.data?.detail ?? "Failed to load lesson.");
+      } finally {
+        setLoading(false);
+      }
     }
+
+    if (lessonId) void loadLesson();
   }, [lessonId]);
 
-  async function handlePublish(value: boolean) {
-    try {
-      setPublishing(true);
+  const sections = useMemo<SectionItem[]>(() => {
+    if (!lesson) return [];
 
-      const updated = await SuperAdminLessonService.publishLesson(
-        lessonId,
-        value,
-      );
+    return [
+      {
+        key: "independent_reading",
+        title: "Independent Reading",
+        minutes: 7,
+        content: lesson.alf?.independent_reading,
+      },
+      {
+        key: "mini_lesson",
+        title: "Mini Lesson",
+        minutes: 7,
+        content: lesson.alf?.mini_lesson,
+      },
+      {
+        key: "case_study",
+        title: "Case Study",
+        minutes: 7,
+        content: lesson.alf?.case_study,
+      },
+      {
+        key: "project_based_learning",
+        title: "Project Based Learning",
+        minutes: 17,
+        content: lesson.alf?.project_based_learning,
+      },
+      {
+        key: "evaluation",
+        title: "Evaluation",
+        minutes: 2,
+        content: lesson.alf?.evaluation,
+      },
+    ];
+  }, [lesson]);
 
-      setLesson(updated);
+  const currentSection = sections[currentIndex];
 
-      toast.success(
-        value
-          ? "Lesson published successfully."
-          : "Lesson unpublished successfully.",
-      );
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.detail ?? "Failed to update lesson status.",
-      );
-    } finally {
-      setPublishing(false);
-    }
-  }
+  // Timer is informational only
+  useEffect(() => {
+    if (!currentSection) return;
 
-  async function handleDelete() {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this lesson? This action cannot be undone.",
-    );
+    const totalSeconds = currentSection.minutes * 60;
 
-    if (!confirmed) return;
+    queueMicrotask(() => {
+      setTimeLeft(totalSeconds);
+    });
 
-    try {
-      setDeleting(true);
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
 
-      await SuperAdminLessonService.deleteLesson(lessonId);
-
-      toast.success("Lesson deleted successfully.");
-
-      router.push("/admin/lessons");
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail ?? "Failed to delete lesson.");
-    } finally {
-      setDeleting(false);
-    }
-  }
+    return () => clearInterval(timer);
+  }, [currentIndex, currentSection]);
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-6xl space-y-6 p-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-48 w-full" />
+      <div className="mx-auto max-w-5xl space-y-4 p-6">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-80 w-full" />
       </div>
     );
   }
 
-  if (!lesson) {
+  if (!lesson || !currentSection) {
     return (
       <div className="mx-auto max-w-3xl p-6 text-center">
         <h2 className="text-xl font-semibold">Lesson not found</h2>
 
-        <p className="text-muted-foreground mt-2">
-          The lesson you are trying to view does not exist.
-        </p>
-
-        <Button asChild className="mt-6">
+        <Button asChild className="mt-4">
           <Link href="/admin/lessons">Back to Lessons</Link>
         </Button>
       </div>
     );
   }
 
+  const totalSeconds = currentSection.minutes * 60;
+  const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
+  const isLast = currentIndex === sections.length - 1;
+
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6">
-      {/* Top Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mx-auto max-w-5xl space-y-6 p-6">
+      {/* Top bar */}
+      <div className="flex items-center justify-between">
         <Button asChild variant="outline" size="sm">
           <Link href="/admin/lessons">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -144,124 +183,89 @@ export default function SuperAdminLessonDetailPage() {
           </Link>
         </Button>
 
-        <div className="flex flex-wrap gap-2">
-          {/* {lesson.file_url && (
-            <Button asChild size="sm" variant="outline">
-              <a href={lesson.file_url} target="_blank" rel="noreferrer">
-                <Download className="mr-2 h-4 w-4" />
-                Download File
-              </a>
-            </Button>
-          )} */}
+        <div className="text-sm text-muted-foreground">
+          Section {currentIndex + 1} of {sections.length}
+        </div>
+      </div>
 
-          {/* {lesson.is_published ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handlePublish(false)}
-              disabled={publishing}
-            >
-              <XCircle className="mr-2 h-4 w-4" />
-              {publishing ? "Updating..." : "Unpublish"}
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              onClick={() => handlePublish(true)}
-              disabled={publishing}
-            >
-              <CheckCircle className="mr-2 h-4 w-4" />
-              {publishing ? "Publishing..." : "Publish"}
-            </Button>
-          )} */}
+      {/* Lesson header */}
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold">{lesson.title}</h1>
+        <p className="text-muted-foreground">
+          Week {lesson.week_number} • {getDayLabel(lesson.lesson_day)}
+        </p>
+      </div>
 
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={deleting}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            {deleting ? "Deleting..." : "Delete"}
+      {/* Section card */}
+      <Card className="border-2 border-brand-blue/20">
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-xl">{currentSection.title}</CardTitle>
+
+              <p className="text-sm text-muted-foreground">
+                Recommended time: {currentSection.minutes} minutes
+              </p>
+            </div>
+
+            <div className="inline-flex items-center gap-2 rounded-full bg-muted px-4 py-2 text-sm font-semibold">
+              <Clock className="h-4 w-4" />
+              {formatTime(timeLeft)}
+            </div>
+          </div>
+
+          <Progress value={progress} className="h-2" />
+
+          <div className="text-xs text-muted-foreground">
+            The timer is a guide only. You may move to any section at any time.
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <div className="rounded-xl border bg-background p-6">
+            <RichSectionContent content={currentSection.content} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Navigation */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Button
+          variant="outline"
+          disabled={currentIndex === 0}
+          onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
+        >
+          Previous Section
+        </Button>
+
+        {isLast ? (
+          <Button asChild>
+            <Link href="/admin/lessons">Finish Lesson</Link>
           </Button>
+        ) : (
+          <Button onClick={() => setCurrentIndex((prev) => prev + 1)}>
+            Next Section
+          </Button>
+        )}
+      </div>
+
+      {/* Quick section navigation */}
+      <div className="rounded-xl border bg-card p-4">
+        <p className="mb-3 text-sm font-medium">Jump to section</p>
+
+        <div className="flex flex-wrap gap-2">
+          {sections.map((section, index) => (
+            <Button
+              key={section.key}
+              variant={index === currentIndex ? "default" : "outline"}
+              size="sm"
+              onClick={() => setCurrentIndex(index)}
+            >
+              {section.title}
+            </Button>
+          ))}
         </div>
       </div>
-
-      {/* Header */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Badge variant={lesson.is_published ? "default" : "secondary"}>
-            {lesson.is_published ? "Published" : "Draft"}
-          </Badge>
-        </div>
-
-        <LessonHeader
-          title={lesson.title}
-          topic={lesson.topic}
-          weekNumber={lesson.week_number}
-          lessonDay={lesson.lesson_day}
-        />
-      </div>
-
-      {/* Lesson Information */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <LessonInfoCard label="Learning Objectives" value={lesson.objectives} />
-
-        <LessonInfoCard label="Teacher Notes" value={lesson.teacher_notes} />
-      </div>
-
-      {/* ALF Summary Banner */}
-      <div className="rounded-xl border border-green-200 bg-green-50 p-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="font-semibold text-green-900">
-              ALF Extraction Complete
-            </h3>
-
-            <p className="text-sm text-green-700">
-              The uploaded lesson file has been processed and the ALF sections
-              were extracted successfully.
-            </p>
-          </div>
-
-          <div className="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-900">
-            Total: 40 mins
-          </div>
-        </div>
-      </div>
-
-      {/* ALF Sections */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ALFSectionCard
-          title="Independent Reading"
-          minutes={7}
-          content={lesson.alf?.independent_reading}
-        />
-
-        <ALFSectionCard
-          title="Mini Lesson"
-          minutes={7}
-          content={lesson.alf?.mini_lesson}
-        />
-
-        <ALFSectionCard
-          title="Case Study"
-          minutes={7}
-          content={lesson.alf?.case_study}
-        />
-
-        <ALFSectionCard
-          title="Project Based Learning"
-          minutes={17}
-          content={lesson.alf?.project_based_learning}
-        />
-      </div>
-
-      <ALFSectionCard
-        title="Evaluation"
-        minutes={2}
-        content={lesson.alf?.evaluation}
-      />
     </div>
   );
 }

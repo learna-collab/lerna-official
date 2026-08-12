@@ -227,25 +227,57 @@ export default function ResultsPage() {
   }
 
   async function exportResults() {
+    if (!classId || !sessionId || !termId) {
+      toast.error("Select class, session and term first");
+      return;
+    }
+
     try {
+      // This is already a Blob because the service returns response.data
       const blob = await SchoolAdminService.exportResults(
         classId,
         sessionId,
         termId,
       );
 
+      const className = classes.find((c) => c.id === classId)?.name ?? "Class";
+
+      const sessionName =
+        sessions.find((s) => s.id === sessionId)?.name ?? "Session";
+
+      const termName = terms.find((t) => t.id === termId)?.name ?? "Term";
+
+      const safe = (value: string) =>
+        value.replace(/[\\\\/:*?"<>|]/g, "").replace(/\s+/g, "_");
+
+      const filename = `${safe(className)}_${safe(sessionName)}_${safe(termName)}_Results.xlsx`;
+
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
 
-      a.href = url;
-      a.download = "results.xlsx";
-      a.click();
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
 
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
       window.URL.revokeObjectURL(url);
 
-      toast.success("Exported");
-    } catch {
-      toast.error("Export failed");
+      toast.success(`Exported ${filename}`);
+    } catch (error: any) {
+      try {
+        if (error.response?.data instanceof Blob) {
+          const text = await error.response.data.text();
+          console.error("EXPORT ERROR BODY:", text);
+        } else {
+          console.error(error);
+        }
+      } catch {
+        console.error(error);
+      }
+
+      toast.error("Failed to export results");
     }
   }
 

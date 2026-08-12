@@ -96,7 +96,30 @@ export class CBTService {
 
     return response.data;
   }
+  // ======================================================
+  // BATCH QUESTION UPLOAD (ADMIN)
+  // ======================================================
 
+  static async batchUploadQuestions(
+    examId: string,
+    file: File,
+  ): Promise<ApiResponse> {
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    const response = await api.post<ApiResponse>(
+      `/cbt/admin/exams/${examId}/questions/batch-upload`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+
+    return response.data;
+  }
   /**
    * Requires backend endpoint:
    * GET /cbt/admin/exams/{exam_id}/questions

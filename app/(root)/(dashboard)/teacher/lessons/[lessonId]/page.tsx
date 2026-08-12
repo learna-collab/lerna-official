@@ -1,11 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -13,53 +12,160 @@ import {
   LessonResponse,
 } from "@/app/services/teacher-lesson.service";
 
-import { LessonHeader } from "@/components/lessons/LessonHeader";
-import { LessonInfoCard } from "@/components/lessons/LessonInfoCard";
-import { ALFSectionCard } from "@/components/lessons/ALFSectionCard";
-
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getDayLabel } from "@/lib/utils";
+
+type SectionItem = {
+  key: string;
+  title: string;
+  minutes: number;
+  content?: string | null;
+};
+
+function formatTime(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function RichSectionContent({ content }: { content?: string | null }) {
+  if (!content) {
+    return (
+      <p className="text-sm italic text-muted-foreground">
+        No content extracted for this section.
+      </p>
+    );
+  }
+
+  const isHtml = /<[a-z][\s\S]*>/i.test(content);
+
+  if (isHtml) {
+    return (
+      <div
+        className="prose prose-sm max-w-none
+                   prose-table:w-full prose-table:border-collapse
+                   prose-th:border prose-th:bg-gray-100 prose-th:p-2
+                   prose-td:border prose-td:p-2
+                   prose-ul:list-disc prose-ul:pl-6
+                   prose-ol:list-decimal prose-ol:pl-6"
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+    );
+  }
+
+  return (
+    <div className="prose prose-sm max-w-none whitespace-pre-wrap leading-7">
+      {content}
+    </div>
+  );
+}
 
 export default function TeacherLessonDetailPage() {
   const params = useParams();
-
   const lessonId = params.lessonId as string;
 
   const [lesson, setLesson] = useState<LessonResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function loadLesson() {
-    try {
-      setLoading(true);
-
-      const data = await TeacherLessonService.getLesson(lessonId);
-
-      setLesson(data);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail ?? "Failed to load lesson.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
-    if (lessonId) {
-      void Promise.resolve().then(() => loadLesson());
+    async function loadLesson() {
+      try {
+        setLoading(true);
+        const data = await TeacherLessonService.getLesson(lessonId);
+        setLesson(data);
+      } catch (error: any) {
+        toast.error(error?.response?.data?.detail ?? "Failed to load lesson.");
+      } finally {
+        setLoading(false);
+      }
     }
+
+    if (lessonId) void loadLesson();
   }, [lessonId]);
+
+  const sections = useMemo<SectionItem[]>(() => {
+    if (!lesson) return [];
+
+    return [
+      {
+        key: "independent_reading",
+        title: "Independent Reading",
+        minutes: 7,
+        content: lesson.alf?.independent_reading,
+      },
+      {
+        key: "mini_lesson",
+        title: "Mini Lesson",
+        minutes: 7,
+        content: lesson.alf?.mini_lesson,
+      },
+      {
+        key: "case_study",
+        title: "Case Study",
+        minutes: 7,
+        content: lesson.alf?.case_study,
+      },
+      {
+        key: "project_based_learning",
+        title: "Project Based Learning",
+        minutes: 17,
+        content: lesson.alf?.project_based_learning,
+      },
+      {
+        key: "evaluation",
+        title: "Evaluation",
+        minutes: 2,
+        content: lesson.alf?.evaluation,
+      },
+    ];
+  }, [lesson]);
+
+  const currentSection = sections[currentIndex];
+
+  useEffect(() => {
+    if (!currentSection) return;
+
+    const totalSeconds = currentSection.minutes * 60;
+
+    const initializeTimer = window.setTimeout(() => {
+      setTimeLeft(totalSeconds);
+      setCompleted(false);
+    }, 0);
+
+    const timer = window.setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          window.clearInterval(timer);
+          setCompleted(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearTimeout(initializeTimer);
+      window.clearInterval(timer);
+    };
+  }, [currentIndex, currentSection]);
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-6xl space-y-6 p-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-48 w-full" />
-        <Skeleton className="h-48 w-full" />
+      <div className="mx-auto max-w-5xl space-y-4 p-6">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-80 w-full" />
       </div>
     );
   }
 
-  if (!lesson) {
+  if (!lesson || !currentSection) {
     return (
       <div className="mx-auto max-w-3xl p-6 text-center">
         <h2 className="text-xl font-semibold">Lesson not found</h2>
@@ -75,8 +181,12 @@ export default function TeacherLessonDetailPage() {
     );
   }
 
+  const totalSeconds = currentSection.minutes * 60;
+  const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
+  const isLast = currentIndex === sections.length - 1;
+
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6">
+    <div className="mx-auto max-w-5xl space-y-6 p-6">
       {/* Top Bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Button asChild variant="outline" size="sm">
@@ -88,7 +198,7 @@ export default function TeacherLessonDetailPage() {
 
         {lesson.file_url && (
           <Button asChild size="sm">
-            <a href={lesson.file_url} target="_blank" rel="noreferrer">
+            <a href={lesson.file_url} download target="_blank" rel="noreferrer">
               <Download className="mr-2 h-4 w-4" />
               Download Original File
             </a>
@@ -97,18 +207,34 @@ export default function TeacherLessonDetailPage() {
       </div>
 
       {/* Header */}
-      <LessonHeader
-        title={lesson.title}
-        topic={lesson.topic}
-        weekNumber={lesson.week_number}
-        lessonDay={lesson.lesson_day}
-      />
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold">{lesson.title}</h1>
+        <p className="text-muted-foreground">
+          Week {lesson.week_number} • {getDayLabel(lesson.lesson_day)}
+        </p>
+      </div>
 
-      {/* Lesson Info */}
+      {/* Info */}
       <div className="grid gap-4 md:grid-cols-2">
-        <LessonInfoCard label="Learning Objectives" value={lesson.objectives} />
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Learning Objectives</CardTitle>
+          </CardHeader>
 
-        <LessonInfoCard label="Teacher Notes" value={lesson.teacher_notes} />
+          <CardContent>
+            <RichSectionContent content={lesson.objectives} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Teacher Notes</CardTitle>
+          </CardHeader>
+
+          <CardContent>
+            <RichSectionContent content={lesson.teacher_notes} />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Teaching Mode Banner */}
@@ -128,38 +254,63 @@ export default function TeacherLessonDetailPage() {
         </div>
       </div>
 
-      {/* ALF Sections */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ALFSectionCard
-          title="Independent Reading"
-          minutes={7}
-          content={lesson.alf?.independent_reading}
-        />
+      {/* Current Section */}
+      <Card className="border-2 border-blue-200">
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-xl">{currentSection.title}</CardTitle>
 
-        <ALFSectionCard
-          title="Mini Lesson"
-          minutes={7}
-          content={lesson.alf?.mini_lesson}
-        />
+              <p className="text-sm text-muted-foreground">
+                Recommended time: {currentSection.minutes} minutes
+              </p>
+            </div>
 
-        <ALFSectionCard
-          title="Case Study"
-          minutes={7}
-          content={lesson.alf?.case_study}
-        />
+            <div className="inline-flex items-center gap-2 rounded-full bg-muted px-4 py-2 text-sm font-semibold">
+              <Clock className="h-4 w-4" />
+              {formatTime(timeLeft)}
+            </div>
+          </div>
 
-        <ALFSectionCard
-          title="Project Based Learning"
-          minutes={17}
-          content={lesson.alf?.project_based_learning}
-        />
+          <Progress value={progress} className="h-2" />
+
+          <div className="text-xs text-muted-foreground">
+            {completed
+              ? "Time completed. You may continue to the next section."
+              : "You can move between sections at any time; the timer is only a guide."}
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <div className="rounded-xl border bg-background p-6">
+            <RichSectionContent content={currentSection.content} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Navigation */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Button
+          variant="outline"
+          disabled={currentIndex === 0}
+          onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
+        >
+          Previous Section
+        </Button>
+
+        {isLast ? (
+          <Button asChild className={completed ? "" : "opacity-80"}>
+            <Link href="/teacher/lessons">Finish Lesson</Link>
+          </Button>
+        ) : (
+          <Button
+            className={completed ? "animate-pulse" : ""}
+            onClick={() => setCurrentIndex((prev) => prev + 1)}
+          >
+            Next Section
+          </Button>
+        )}
       </div>
-
-      <ALFSectionCard
-        title="Evaluation"
-        minutes={2}
-        content={lesson.alf?.evaluation}
-      />
     </div>
   );
 }

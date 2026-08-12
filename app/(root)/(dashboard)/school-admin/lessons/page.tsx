@@ -28,12 +28,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getDayLabel, LESSON_DAYS } from "@/lib/utils";
+
+// UI labels mapped to backend values
 
 export default function SchoolAdminLessonsPage() {
   const [lessons, setLessons] = useState<LessonResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [weekNumber, setWeekNumber] = useState("");
+
+  // Day filter keeps backend value
+  const [lessonDay, setLessonDay] = useState("Day 1");
 
   const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
   const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
@@ -106,7 +112,10 @@ export default function SchoolAdminLessonsPage() {
         weekNumber: selectedWeek,
       });
 
-      setLessons(data);
+      // Filter by selected day on frontend
+      const filtered = data.filter((lesson) => lesson.lesson_day === lessonDay);
+
+      setLessons(filtered);
     } catch (error: any) {
       toast.error(error?.response?.data?.detail ?? "Failed to load lessons.");
     } finally {
@@ -140,7 +149,7 @@ export default function SchoolAdminLessonsPage() {
     if (!academicLoading && sessionId && termId && classId && subjectId) {
       void Promise.resolve().then(() => loadLessons());
     }
-  }, [academicLoading, sessionId, termId, classId, subjectId]);
+  }, [academicLoading, sessionId, termId, classId, subjectId, lessonDay]);
 
   function handleApplyFilter() {
     if (!weekNumber) {
@@ -153,6 +162,7 @@ export default function SchoolAdminLessonsPage() {
 
   function handleResetFilter() {
     setWeekNumber("");
+    setLessonDay("Day 1");
     void loadLessons();
   }
 
@@ -168,7 +178,8 @@ export default function SchoolAdminLessonsPage() {
       </div>
 
       {/* Filters */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* Class */}
         <div className="space-y-2">
           <Label>Class</Label>
 
@@ -187,6 +198,7 @@ export default function SchoolAdminLessonsPage() {
           </Select>
         </div>
 
+        {/* Subject */}
         <div className="space-y-2">
           <Label>Subject</Label>
 
@@ -211,6 +223,25 @@ export default function SchoolAdminLessonsPage() {
               {subjects.map((item) => (
                 <SelectItem key={item.id} value={item.id}>
                   {item.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Day */}
+        <div className="space-y-2">
+          <Label>Day</Label>
+
+          <Select value={lessonDay} onValueChange={setLessonDay}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select day" />
+            </SelectTrigger>
+
+            <SelectContent>
+              {LESSON_DAYS.map((day) => (
+                <SelectItem key={day.value} value={day.value}>
+                  {day.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -244,7 +275,7 @@ export default function SchoolAdminLessonsPage() {
           lessons={lessons.map((lesson) => ({
             id: lesson.id,
             week_number: lesson.week_number,
-            lesson_day: lesson.lesson_day,
+            lesson_day: getDayLabel(lesson.lesson_day),
             class_name: lesson.class_name,
             subject_name: lesson.subject_name,
             topic: lesson.topic,

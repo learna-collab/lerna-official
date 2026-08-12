@@ -41,14 +41,17 @@ export interface UploadLessonPayload {
   file: File;
 }
 
+export interface Option {
+  id: string;
+  name: string;
+}
+
 export const SuperAdminLessonService = {
   async uploadLesson(payload: UploadLessonPayload): Promise<LessonResponse> {
     const formData = new FormData();
 
     formData.append("class_template_id", payload.class_template_id);
-
     formData.append("subject_template_id", payload.subject_template_id);
-
     formData.append("session_id", payload.session_id);
     formData.append("term_id", payload.term_id);
     formData.append("week_number", String(payload.week_number));
@@ -108,25 +111,28 @@ export const SuperAdminLessonService = {
     return data;
   },
 
-  async getClasses(): Promise<{ id: string; name: string }[]> {
+  async getClasses(): Promise<Option[]> {
     const { data } = await api.get("/super-admin/lessons/classes");
 
     return data;
   },
 
-  async getSubjects(): Promise<{ id: string; name: string }[]> {
-    const { data } = await api.get("/super-admin/lessons/subjects");
+  // NEW: load subjects for a selected class only
+  async getClassSubjects(classTemplateId: string): Promise<Option[]> {
+    const { data } = await api.get(
+      `/super-admin/lessons/classes/${classTemplateId}/subjects`,
+    );
 
     return data;
   },
 
-  async getSessions(): Promise<{ id: string; name: string }[]> {
+  async getSessions(): Promise<Option[]> {
     const { data } = await api.get("/super-admin/lessons/sessions");
 
     return data;
   },
 
-  async getTerms(): Promise<{ id: string; name: string }[]> {
+  async getTerms(): Promise<Option[]> {
     const { data } = await api.get("/super-admin/lessons/terms");
 
     return data;

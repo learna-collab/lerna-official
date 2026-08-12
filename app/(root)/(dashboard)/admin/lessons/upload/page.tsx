@@ -4,10 +4,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, FileText } from "lucide-react";
+import { Upload, FileText, ExternalLink, Eye, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
-import { SuperAdminLessonService } from "@/app/services/super-admin-lesson.service";
+import {
+  SuperAdminLessonService,
+  LessonResponse,
+} from "@/app/services/super-admin-lesson.service";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -25,12 +28,21 @@ type Option = {
   id: string;
   name: string;
 };
+const LESSON_DAYS = [
+  { label: "Monday", value: "Day 1" },
+  { label: "Tuesday", value: "Day 2" },
+  { label: "Wednesday", value: "Day 3" },
+  { label: "Thursday", value: "Day 4" },
+  { label: "Friday", value: "Day 5" },
+];
 
 export default function UploadLessonPage() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(true);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [checkingExisting, setCheckingExisting] = useState(false);
 
   // Form state
   const [classTemplateId, setClassTemplateId] = useState("");
@@ -40,6 +52,11 @@ export default function UploadLessonPage() {
   const [weekNumber, setWeekNumber] = useState("1");
   const [lessonDay, setLessonDay] = useState("Day 1");
   const [file, setFile] = useState<File | null>(null);
+
+  // Existing uploaded lesson
+  const [existingLesson, setExistingLesson] = useState<LessonResponse | null>(
+    null,
+  );
 
   // API-loaded options
   const [classes, setClasses] = useState<Option[]>([]);
@@ -51,24 +68,27 @@ export default function UploadLessonPage() {
     try {
       setLoadingOptions(true);
 
-      const [classData, subjectData, sessionData, termData] = await Promise.all(
-        [
-          SuperAdminLessonService.getClasses(),
-          SuperAdminLessonService.getSubjects(),
-          SuperAdminLessonService.getSessions(),
-          SuperAdminLessonService.getTerms(),
-        ],
-      );
+      const [classData, sessionData, termData] = await Promise.all([
+        SuperAdminLessonService.getClasses(),
+        SuperAdminLessonService.getSessions(),
+        SuperAdminLessonService.getTerms(),
+      ]);
 
       setClasses(classData);
-      setSubjects(subjectData);
       setSessions(sessionData);
       setTerms(termData);
 
-      if (classData.length > 0) setClassTemplateId(classData[0].id);
-      if (subjectData.length > 0) setSubjectTemplateId(subjectData[0].id);
-      if (sessionData.length > 0) setSessionId(sessionData[0].id);
-      if (termData.length > 0) setTermId(termData[0].id);
+      if (classData.length > 0) {
+        setClassTemplateId(classData[0].id);
+      }
+
+      if (sessionData.length > 0) {
+        setSessionId(sessionData[0].id);
+      }
+
+      if (termData.length > 0) {
+        setTermId(termData[0].id);
+      }
     } catch (error: any) {
       toast.error(
         error?.response?.data?.detail ?? "Failed to load lesson options.",
@@ -78,9 +98,103 @@ export default function UploadLessonPage() {
     }
   }
 
+  // Load subjects for selected class
+  async function loadClassSubjects(classId: string) {
+    if (!classId) {
+      setSubjects([]);
+      setSubjectTemplateId("");
+      return;
+    }
+
+    try {
+      setLoadingSubjects(true);
+
+      const data = await SuperAdminLessonService.getClassSubjects(classId);
+
+      setSubjects(data);
+
+      // Auto-select first subject
+      if (data.length > 0) {
+        setSubjectTemplateId(data[0].id);
+      } else {
+        setSubjectTemplateId("");
+      }
+    } catch (error: any) {
+      setSubjects([]);
+      setSubjectTemplateId("");
+
+      toast.error(
+        error?.response?.data?.detail ??
+          "Failed to load subjects for this class.",
+      );
+    } finally {
+      setLoadingSubjects(false);
+    }
+  }
+
+  // Load existing uploaded lesson for the selected filters
+  async function loadExistingLesson() {
+    if (
+      !classTemplateId ||
+      !subjectTemplateId ||
+      !sessionId ||
+      !termId ||
+      !weekNumber ||
+      !lessonDay
+    ) {
+      setExistingLesson(null);
+      return;
+    }
+
+    try {
+      setCheckingExisting(true);
+
+      const lessons = await SuperAdminLessonService.getLessons({
+        classTemplateId,
+        subjectTemplateId,
+        sessionId,
+        termId,
+        weekNumber: Number(weekNumber),
+      });
+
+      const match =
+        lessons.find(
+          (lesson) =>
+            lesson.week_number === Number(weekNumber) &&
+            lesson.lesson_day === lessonDay,
+        ) ?? null;
+
+      setExistingLesson(match);
+    } catch (error) {
+      console.error(error);
+      setExistingLesson(null);
+    } finally {
+      setCheckingExisting(false);
+    }
+  }
+
   useEffect(() => {
     void Promise.resolve().then(() => loadOptions());
   }, []);
+
+  // Reload subjects whenever class changes
+  useEffect(() => {
+    if (classTemplateId) {
+      void Promise.resolve().then(() => loadClassSubjects(classTemplateId));
+    }
+  }, [classTemplateId]);
+
+  // Check existing lesson whenever filters change
+  useEffect(() => {
+    void Promise.resolve().then(() => loadExistingLesson());
+  }, [
+    classTemplateId,
+    subjectTemplateId,
+    sessionId,
+    termId,
+    weekNumber,
+    lessonDay,
+  ]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -108,7 +222,11 @@ export default function UploadLessonPage() {
         file,
       });
 
-      toast.success("Lesson uploaded successfully.");
+      toast.success(
+        existingLesson
+          ? "Lesson replaced successfully."
+          : "Lesson uploaded successfully.",
+      );
 
       router.push(`/admin/lessons/${lesson.id}`);
     } catch (error: any) {
@@ -150,7 +268,11 @@ export default function UploadLessonPage() {
 
                 <Select
                   value={classTemplateId}
-                  onValueChange={setClassTemplateId}
+                  onValueChange={(value) => {
+                    setClassTemplateId(value);
+                    setSubjectTemplateId("");
+                    setExistingLesson(null);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select class" />
@@ -173,9 +295,20 @@ export default function UploadLessonPage() {
                 <Select
                   value={subjectTemplateId}
                   onValueChange={setSubjectTemplateId}
+                  disabled={
+                    !classTemplateId || loadingSubjects || subjects.length === 0
+                  }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select subject" />
+                    <SelectValue
+                      placeholder={
+                        loadingSubjects
+                          ? "Loading subjects..."
+                          : subjects.length === 0
+                            ? "No subjects available"
+                            : "Select subject"
+                      }
+                    />
                   </SelectTrigger>
 
                   <SelectContent>
@@ -186,6 +319,14 @@ export default function UploadLessonPage() {
                     ))}
                   </SelectContent>
                 </Select>
+
+                {classTemplateId &&
+                  subjects.length === 0 &&
+                  !loadingSubjects && (
+                    <p className="text-xs text-muted-foreground">
+                      No subjects have been assigned to this class template.
+                    </p>
+                  )}
               </div>
 
               {/* Session */}
@@ -239,28 +380,35 @@ export default function UploadLessonPage() {
                   />
                 </div>
 
+                {/* Lesson Day */}
                 <div className="space-y-2">
                   <Label>Lesson Day</Label>
 
                   <Select value={lessonDay} onValueChange={setLessonDay}>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select day" />
                     </SelectTrigger>
 
                     <SelectContent>
-                      <SelectItem value="Day 1">Day 1</SelectItem>
-                      <SelectItem value="Day 2">Day 2</SelectItem>
-                      <SelectItem value="Day 3">Day 3</SelectItem>
-                      <SelectItem value="Day 4">Day 4</SelectItem>
-                      <SelectItem value="Day 5">Day 5</SelectItem>
+                      {LESSON_DAYS.map((day) => (
+                        <SelectItem key={day.value} value={day.value}>
+                          {day.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
+              {/* Existing lesson section remains unchanged */}
+
               {/* File Upload */}
               <div className="space-y-2">
-                <Label>Lesson File (DOCX or PDF)</Label>
+                <Label>
+                  {existingLesson
+                    ? "Replace Lesson File (DOCX or PDF)"
+                    : "Lesson File (DOCX or PDF)"}
+                </Label>
 
                 <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed p-8 text-center transition hover:bg-muted/50">
                   <Upload className="mb-3 h-8 w-8 text-muted-foreground" />
@@ -301,8 +449,17 @@ export default function UploadLessonPage() {
                   Cancel
                 </Button>
 
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Uploading..." : "Upload Lesson"}
+                <Button
+                  type="submit"
+                  disabled={loading || !subjectTemplateId || loadingSubjects}
+                >
+                  {loading
+                    ? existingLesson
+                      ? "Replacing..."
+                      : "Uploading..."
+                    : existingLesson
+                      ? "Replace Lesson"
+                      : "Upload Lesson"}
                 </Button>
               </div>
             </form>
