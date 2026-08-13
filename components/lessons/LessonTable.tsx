@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 export interface LessonTableItem {
   id: string;
   week_number: number;
-  lesson_day: string;
   class_name: string;
   subject_name: string;
   topic: string;
@@ -35,12 +34,6 @@ export function LessonTable({ lessons, basePath }: LessonTableProps) {
           <TableRow className="hover:bg-muted/50">
             <TableHead className="w-[120px] font-semibold">Week</TableHead>
 
-            <TableHead className="w-[140px] font-semibold">Day</TableHead>
-
-            <TableHead className="w-[180px] font-semibold">Class</TableHead>
-
-            <TableHead className="w-[220px] font-semibold">Subject</TableHead>
-
             <TableHead className="font-semibold">Topic</TableHead>
 
             <TableHead className="font-semibold">Title</TableHead>
@@ -57,18 +50,6 @@ export function LessonTable({ lessons, basePath }: LessonTableProps) {
             >
               <TableCell className="font-medium text-foreground">
                 Week {lesson.week_number}
-              </TableCell>
-
-              <TableCell className="text-muted-foreground">
-                {lesson.lesson_day}
-              </TableCell>
-
-              <TableCell className="font-medium text-foreground">
-                {lesson.class_name}
-              </TableCell>
-
-              <TableCell className="text-foreground">
-                {lesson.subject_name}
               </TableCell>
 
               <TableCell className="max-w-[260px] truncate text-foreground">

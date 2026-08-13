@@ -28,13 +28,6 @@ type Option = {
   id: string;
   name: string;
 };
-const LESSON_DAYS = [
-  { label: "Monday", value: "Day 1" },
-  { label: "Tuesday", value: "Day 2" },
-  { label: "Wednesday", value: "Day 3" },
-  { label: "Thursday", value: "Day 4" },
-  { label: "Friday", value: "Day 5" },
-];
 
 export default function UploadLessonPage() {
   const router = useRouter();
@@ -50,7 +43,6 @@ export default function UploadLessonPage() {
   const [sessionId, setSessionId] = useState("");
   const [termId, setTermId] = useState("");
   const [weekNumber, setWeekNumber] = useState("1");
-  const [lessonDay, setLessonDay] = useState("Day 1");
   const [file, setFile] = useState<File | null>(null);
 
   // Existing uploaded lesson
@@ -139,8 +131,7 @@ export default function UploadLessonPage() {
       !subjectTemplateId ||
       !sessionId ||
       !termId ||
-      !weekNumber ||
-      !lessonDay
+      !weekNumber
     ) {
       setExistingLesson(null);
       return;
@@ -158,11 +149,8 @@ export default function UploadLessonPage() {
       });
 
       const match =
-        lessons.find(
-          (lesson) =>
-            lesson.week_number === Number(weekNumber) &&
-            lesson.lesson_day === lessonDay,
-        ) ?? null;
+        lessons.find((lesson) => lesson.week_number === Number(weekNumber)) ??
+        null;
 
       setExistingLesson(match);
     } catch (error) {
@@ -187,14 +175,7 @@ export default function UploadLessonPage() {
   // Check existing lesson whenever filters change
   useEffect(() => {
     void Promise.resolve().then(() => loadExistingLesson());
-  }, [
-    classTemplateId,
-    subjectTemplateId,
-    sessionId,
-    termId,
-    weekNumber,
-    lessonDay,
-  ]);
+  }, [classTemplateId, subjectTemplateId, sessionId, termId, weekNumber]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -218,7 +199,6 @@ export default function UploadLessonPage() {
         session_id: sessionId,
         term_id: termId,
         week_number: Number(weekNumber),
-        lesson_day: lessonDay,
         file,
       });
 
@@ -244,7 +224,7 @@ export default function UploadLessonPage() {
           Upload Daily Lesson
         </h1>
 
-        <p className="text-muted-foreground mt-1">
+        <p className="mt-1 text-muted-foreground">
           Upload a DOCX or PDF lesson note. The ALF sections will be extracted
           automatically.
         </p>
@@ -367,40 +347,81 @@ export default function UploadLessonPage() {
                 </Select>
               </div>
 
-              {/* Week & Day */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Week Number</Label>
+              {/* Week Number */}
+              <div className="space-y-2">
+                <Label>Week Number</Label>
 
-                  <Input
-                    type="number"
-                    min={1}
-                    value={weekNumber}
-                    onChange={(e) => setWeekNumber(e.target.value)}
-                  />
-                </div>
-
-                {/* Lesson Day */}
-                <div className="space-y-2">
-                  <Label>Lesson Day</Label>
-
-                  <Select value={lessonDay} onValueChange={setLessonDay}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select day" />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                      {LESSON_DAYS.map((day) => (
-                        <SelectItem key={day.value} value={day.value}>
-                          {day.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Input
+                  type="number"
+                  min={1}
+                  value={weekNumber}
+                  onChange={(e) => setWeekNumber(e.target.value)}
+                />
               </div>
 
-              {/* Existing lesson section remains unchanged */}
+              {/* Existing Lesson */}
+              {checkingExisting ? (
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Checking for existing lesson...
+                </div>
+              ) : existingLesson ? (
+                <div className="space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-amber-900">
+                        Lesson already uploaded for Week{" "}
+                        {existingLesson.week_number}
+                      </p>
+
+                      <p className="text-sm text-amber-800">
+                        Uploading a new file will replace the existing lesson.
+                      </p>
+                    </div>
+
+                    <FileText className="h-5 w-5 text-amber-700" />
+                  </div>
+
+                  <div className="rounded-lg border border-amber-200 bg-white p-3 text-sm">
+                    <p className="font-medium text-slate-900">
+                      {existingLesson.title}
+                    </p>
+
+                    <p className="text-slate-600">
+                      Topic: {existingLesson.topic}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        router.push(`/admin/lessons/${existingLesson.id}`)
+                      }
+                    >
+                      <Eye className="mr-2 h-4 w-4" />
+                      View Lesson
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        window.open(
+                          `/admin/lessons/${existingLesson.id}`,
+                          "_blank",
+                        )
+                      }
+                    >
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Open in New Tab
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
 
               {/* File Upload */}
               <div className="space-y-2">

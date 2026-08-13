@@ -37,7 +37,7 @@ export interface UploadLessonPayload {
   session_id: string;
   term_id: string;
   week_number: number;
-  lesson_day: string;
+  lesson_day?: string;
   file: File;
 }
 
@@ -55,7 +55,9 @@ export const SuperAdminLessonService = {
     formData.append("session_id", payload.session_id);
     formData.append("term_id", payload.term_id);
     formData.append("week_number", String(payload.week_number));
-    formData.append("lesson_day", payload.lesson_day);
+    if (payload.lesson_day) {
+      formData.append("lesson_day", payload.lesson_day);
+    }
     formData.append("file", payload.file);
 
     const { data } = await api.post("/super-admin/lessons/upload", formData, {

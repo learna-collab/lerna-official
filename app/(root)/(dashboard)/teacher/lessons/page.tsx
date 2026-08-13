@@ -32,27 +32,11 @@ import {
 type ClassOption = { id: string; name: string };
 type SubjectOption = { id: string; name: string };
 
-// UI labels mapped to backend values
-const LESSON_DAYS = [
-  { label: "Monday", value: "Day 1" },
-  { label: "Tuesday", value: "Day 2" },
-  { label: "Wednesday", value: "Day 3" },
-  { label: "Thursday", value: "Day 4" },
-  { label: "Friday", value: "Day 5" },
-];
-
-function getDayLabel(value: string) {
-  return LESSON_DAYS.find((d) => d.value === value)?.label ?? value;
-}
-
 export default function TeacherLessonsPage() {
   const [lessons, setLessons] = useState<LessonResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [weekNumber, setWeekNumber] = useState("");
-
-  // Keep backend value internally
-  const [lessonDay, setLessonDay] = useState("Day 1");
 
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [subjects, setSubjects] = useState<SubjectOption[]>([]);
@@ -127,10 +111,7 @@ export default function TeacherLessonsPage() {
         weekNumber: selectedWeek,
       });
 
-      // Filter by selected day on frontend
-      const filtered = data.filter((lesson) => lesson.lesson_day === lessonDay);
-
-      setLessons(filtered);
+      setLessons(data);
     } catch (error: any) {
       toast.error(error?.response?.data?.detail ?? "Failed to load lessons.");
     } finally {
@@ -164,7 +145,7 @@ export default function TeacherLessonsPage() {
     if (!academicLoading && sessionId && termId && classId && subjectId) {
       void Promise.resolve().then(() => loadLessons());
     }
-  }, [academicLoading, sessionId, termId, classId, subjectId, lessonDay]);
+  }, [academicLoading, sessionId, termId, classId, subjectId]);
 
   // =========================================================
   // FILTER ACTIONS
@@ -181,7 +162,6 @@ export default function TeacherLessonsPage() {
 
   function handleResetFilter() {
     setWeekNumber("");
-    setLessonDay("Day 1");
     void loadLessons();
   }
 
@@ -197,7 +177,7 @@ export default function TeacherLessonsPage() {
       </div>
 
       {/* Filters */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         {/* Class */}
         <div className="space-y-2">
           <Label>Class</Label>
@@ -247,25 +227,6 @@ export default function TeacherLessonsPage() {
             </SelectContent>
           </Select>
         </div>
-
-        {/* Day */}
-        <div className="space-y-2">
-          <Label>Day</Label>
-
-          <Select value={lessonDay} onValueChange={setLessonDay}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select day" />
-            </SelectTrigger>
-
-            <SelectContent>
-              {LESSON_DAYS.map((day) => (
-                <SelectItem key={day.value} value={day.value}>
-                  {day.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       {/* Week Filter */}
@@ -294,7 +255,6 @@ export default function TeacherLessonsPage() {
           lessons={lessons.map((lesson) => ({
             id: lesson.id,
             week_number: lesson.week_number,
-            lesson_day: getDayLabel(lesson.lesson_day),
             class_name: lesson.class_name,
             subject_name: lesson.subject_name,
             topic: lesson.topic,

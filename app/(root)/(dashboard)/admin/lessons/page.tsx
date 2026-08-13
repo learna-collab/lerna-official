@@ -27,19 +27,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// UI labels mapped to backend values
-const LESSON_DAYS = [
-  { label: "Monday", value: "Day 1" },
-  { label: "Tuesday", value: "Day 2" },
-  { label: "Wednesday", value: "Day 3" },
-  { label: "Thursday", value: "Day 4" },
-  { label: "Friday", value: "Day 5" },
-];
-
-function getDayLabel(value: string) {
-  return LESSON_DAYS.find((d) => d.value === value)?.label ?? value;
-}
-
 export default function SuperAdminLessonsPage() {
   const [lessons, setLessons] = useState<LessonResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,9 +34,6 @@ export default function SuperAdminLessonsPage() {
   const [loadingSubjects, setLoadingSubjects] = useState(false);
 
   const [weekNumber, setWeekNumber] = useState("");
-
-  // Day filter keeps backend value
-  const [lessonDay, setLessonDay] = useState("Day 1");
 
   const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
   const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
@@ -145,10 +129,7 @@ export default function SuperAdminLessonsPage() {
         weekNumber: selectedWeek,
       });
 
-      // Filter by selected day on frontend
-      const filtered = data.filter((lesson) => lesson.lesson_day === lessonDay);
-
-      setLessons(filtered);
+      setLessons(data);
     } catch (error: any) {
       toast.error(error?.response?.data?.detail ?? "Failed to load lessons.");
     } finally {
@@ -173,7 +154,7 @@ export default function SuperAdminLessonsPage() {
     if (classId && subjectId && sessionId && termId && !loadingSubjects) {
       void Promise.resolve().then(() => loadLessons());
     }
-  }, [classId, subjectId, sessionId, termId, lessonDay, loadingSubjects]);
+  }, [classId, subjectId, sessionId, termId, loadingSubjects]);
 
   function handleApplyFilter() {
     if (!weekNumber) {
@@ -186,7 +167,6 @@ export default function SuperAdminLessonsPage() {
 
   function handleResetFilter() {
     setWeekNumber("");
-    setLessonDay("Day 1");
     void loadLessons();
   }
 
@@ -197,7 +177,7 @@ export default function SuperAdminLessonsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Lesson Notes</h1>
 
-          <p className="text-muted-foreground mt-1">
+          <p className="mt-1 text-muted-foreground">
             Upload, review, and manage ALF lesson notes.
           </p>
         </div>
@@ -211,7 +191,7 @@ export default function SuperAdminLessonsPage() {
       </div>
 
       {/* Filters */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Class */}
         <div className="space-y-2">
           <Label>Class</Label>
@@ -312,25 +292,6 @@ export default function SuperAdminLessonsPage() {
             </SelectContent>
           </Select>
         </div>
-
-        {/* Day */}
-        <div className="space-y-2">
-          <Label>Day</Label>
-
-          <Select value={lessonDay} onValueChange={setLessonDay}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select day" />
-            </SelectTrigger>
-
-            <SelectContent>
-              {LESSON_DAYS.map((day) => (
-                <SelectItem key={day.value} value={day.value}>
-                  {day.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       {/* Week Filter */}
@@ -359,7 +320,6 @@ export default function SuperAdminLessonsPage() {
           lessons={lessons.map((lesson) => ({
             id: lesson.id,
             week_number: lesson.week_number,
-            lesson_day: getDayLabel(lesson.lesson_day),
             class_name: lesson.class_name,
             subject_name: lesson.subject_name,
             topic: lesson.topic,
