@@ -55,9 +55,16 @@ export function ClassAccordion({
           value={schoolClass.id}
           className="overflow-hidden rounded-2xl border bg-white shadow-sm"
         >
-          <AccordionTrigger className="px-4 py-5 sm:px-6">
-            <div className="flex w-full flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-              {/* Left */}
+          {/* =====================================================
+              HEADER
+          ===================================================== */}
+
+          <div className="flex items-center">
+            {/* ===================================================
+                ACCORDION TRIGGER
+            =================================================== */}
+
+            <AccordionTrigger className="min-w-0 flex-1 px-4 py-5 hover:no-underline sm:px-6">
               <div className="min-w-0 flex-1 text-left">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="truncate text-lg font-semibold">
@@ -80,55 +87,72 @@ export function ClassAccordion({
                   </span>
                 </div>
               </div>
+            </AccordionTrigger>
 
-              {/* Right */}
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="flex flex-wrap items-center gap-2"
+            {/* ===================================================
+                ACTION BUTTONS
+
+                IMPORTANT:
+                These are OUTSIDE AccordionTrigger because
+                AccordionTrigger renders a <button>.
+            =================================================== */}
+
+            <div
+              className="flex shrink-0 items-center gap-2 px-4 sm:px-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Desktop Add Subject */}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={saving}
+                onClick={() => onAddSubject(schoolClass)}
+                className="hidden sm:flex"
               >
-                {/* Desktop */}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={saving}
-                  onClick={() => onAddSubject(schoolClass)}
-                  className="hidden sm:flex"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Subject
-                </Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Subject
+              </Button>
 
-                {/* Mobile */}
-                <Button
-                  size="icon"
-                  variant="outline"
-                  disabled={saving}
-                  onClick={() => onAddSubject(schoolClass)}
-                  className="sm:hidden"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+              {/* Mobile Add Subject */}
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                disabled={saving}
+                onClick={() => onAddSubject(schoolClass)}
+                className="sm:hidden"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
 
-                <Button
-                  size="icon"
-                  variant="outline"
-                  disabled={saving}
-                  onClick={() => onEditClass(schoolClass)}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
+              {/* Edit */}
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                disabled={saving}
+                onClick={() => onEditClass(schoolClass)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
 
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  disabled={saving}
-                  onClick={() => onDeleteClass(schoolClass)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+              {/* Delete */}
+              <Button
+                type="button"
+                size="icon"
+                variant="destructive"
+                disabled={saving}
+                onClick={() => onDeleteClass(schoolClass)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
-          </AccordionTrigger>
+          </div>
+
+          {/* =====================================================
+              CONTENT
+          ===================================================== */}
 
           <AccordionContent className="px-4 pb-5 sm:px-6">
             {schoolClass.subjects.length === 0 ? (

@@ -98,7 +98,6 @@ export default function BulkImport() {
   async function importStudents() {
     if (!studentFile) {
       toast.error("Please choose a student Excel file.");
-
       return;
     }
 
@@ -107,18 +106,21 @@ export default function BulkImport() {
 
       const blob = await RegistrationService.importStudents(studentFile);
 
-      downloadBlob(blob, "student_credentials.xlsx");
+      downloadBlob(blob, "student_import_report.xlsx");
 
-      toast.success("Students imported successfully.");
+      toast.success(
+        "Student import completed. Check the downloaded report for successful and failed rows.",
+      );
 
       setStudentFile(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail ?? "Import failed.");
+      toast.error(
+        err?.response?.data?.detail ?? err?.message ?? "Student import failed.",
+      );
     } finally {
       setLoadingStudent(false);
     }
   }
-
   // =====================================
   // IMPORT TEACHERS
   // =====================================
@@ -126,7 +128,6 @@ export default function BulkImport() {
   async function importTeachers() {
     if (!teacherFile) {
       toast.error("Please choose a teacher Excel file.");
-
       return;
     }
 
@@ -135,13 +136,17 @@ export default function BulkImport() {
 
       const blob = await RegistrationService.importTeachers(teacherFile);
 
-      downloadBlob(blob, "teacher_credentials.xlsx");
+      downloadBlob(blob, "teacher_import_report.xlsx");
 
-      toast.success("Teachers imported successfully.");
+      toast.success(
+        "Teacher import completed. Check the downloaded report for successful and failed rows.",
+      );
 
       setTeacherFile(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail ?? "Import failed.");
+      toast.error(
+        err?.response?.data?.detail ?? err?.message ?? "Teacher import failed.",
+      );
     } finally {
       setLoadingTeacher(false);
     }
