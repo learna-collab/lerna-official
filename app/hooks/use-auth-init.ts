@@ -15,7 +15,6 @@ export function useAuthInit() {
     let mounted = true;
 
     const init = async () => {
-      // 🚨 prevent double-trigger issues in dev / strict mode
       startLoading();
 
       try {
@@ -31,18 +30,18 @@ export function useAuthInit() {
 
         setUser(user);
       } catch (error) {
-        // silent fail for auth (expected on logged out users)
         if (!mounted) return;
 
         setUser(null);
         setAccessToken(null);
       } finally {
         if (!mounted) return;
+
         finishLoading();
       }
     };
 
-    init();
+    void init();
 
     return () => {
       mounted = false;
