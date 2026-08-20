@@ -95,7 +95,7 @@ export const SuperAdminLessonService = {
 
   async getLessons(params: {
     classTemplateId: string;
-
+    subjectTemplateId?: string;
     sessionId: string;
     termId: string;
     weekNumber?: number;
@@ -103,7 +103,7 @@ export const SuperAdminLessonService = {
     const { data } = await api.get("/super-admin/lessons", {
       params: {
         class_template_id: params.classTemplateId,
-
+        subject_template_id: params.subjectTemplateId,
         session_id: params.sessionId,
         term_id: params.termId,
         week_number: params.weekNumber,
