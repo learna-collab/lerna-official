@@ -47,8 +47,6 @@ export default function RegistrationTabs() {
 
           <TabsTrigger value="teachers">Teachers</TabsTrigger>
 
-          <TabsTrigger value="parents">Parents</TabsTrigger>
-
           <TabsTrigger value="bulk">Bulk Import</TabsTrigger>
         </TabsList>
 
@@ -59,8 +57,6 @@ export default function RegistrationTabs() {
         <TabsContent value="teachers">
           <TeacherRegistrationForm onSuccess={showCredentials} />
         </TabsContent>
-
-       
 
         <TabsContent value="bulk">
           <BulkImport />
