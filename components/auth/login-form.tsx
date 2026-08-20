@@ -43,50 +43,99 @@ export default function LoginForm() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
 
+    if (!username.trim()) {
+      setError("Please enter your username.");
+      return;
+    }
+
+    if (!password.trim()) {
+      setError("Please enter your password.");
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
 
-      const result = await AuthService.login(username, password);
+      const result = await AuthService.login(username.trim(), password);
 
       useAuthStore.setState({
         user: result.user,
-
         accessToken: result.access_token,
       });
 
       if (!result.user.profile_completed) {
         router.replace("/complete-profile");
-
         return;
       }
 
       switch (result.user.role) {
         case "STUDENT":
           router.replace("/student");
-
           break;
 
         case "TEACHER":
           router.replace("/teacher");
-
           break;
 
         case "PARENT":
           router.replace("/parent");
-
           break;
 
         case "SCHOOL_ADMIN":
           router.replace("/school-admin");
-
           break;
 
         default:
           router.replace("/admin");
       }
-    } catch (error: any) {
-      setError(error?.response?.data?.detail || "Invalid username or password");
+    } catch (err: any) {
+      console.error("Login Error:", err);
+
+      // No internet connection
+      if (!navigator.onLine) {
+        setError(
+          "No internet connection. Please check your network and try again.",
+        );
+        return;
+      }
+
+      // Network error (backend unreachable)
+      if (err.code === "ERR_NETWORK" || !err.response) {
+        setError(
+          "Unable to connect to the server. Please try again in a moment.",
+        );
+        return;
+      }
+
+      // Request timeout
+      if (err.code === "ECONNABORTED") {
+        setError("Request timed out. Please try again.");
+        return;
+      }
+
+      switch (err.response.status) {
+        case 401:
+          setError("Invalid username or password.");
+          break;
+
+        case 403:
+          setError("You do not have permission to access this portal.");
+          break;
+
+        case 404:
+          setError("Login service is unavailable.");
+          break;
+
+        case 500:
+          setError("Server error. Please try again later.");
+          break;
+
+        default:
+          setError(
+            err.response.data?.detail || "Login failed. Please try again.",
+          );
+      }
     } finally {
       setLoading(false);
     }
