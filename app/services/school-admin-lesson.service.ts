@@ -40,7 +40,7 @@ export const SchoolAdminLessonService = {
     const { data } = await api.get("/school-admin/lessons", {
       params: {
         class_id: params.classId,
-        subject_id: params.subjectId,
+
         session_id: params.sessionId,
         term_id: params.termId,
         week_number: params.weekNumber,

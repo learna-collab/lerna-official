@@ -12,7 +12,6 @@ export interface LessonALFResponse {
 export interface LessonResponse {
   id: string;
   week_number: number;
-  lesson_day: string;
 
   class_name: string;
   subject_name: string;

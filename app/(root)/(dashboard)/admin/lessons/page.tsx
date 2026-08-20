@@ -84,7 +84,7 @@ export default function SuperAdminLessonsPage() {
 
       const data = await SuperAdminLessonService.getLessons({
         classTemplateId: classId,
-        subjectTemplateId: "",
+
         sessionId,
         termId,
         weekNumber: selectedWeek,
