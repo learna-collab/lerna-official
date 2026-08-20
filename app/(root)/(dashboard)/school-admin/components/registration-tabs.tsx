@@ -9,7 +9,7 @@ import CredentialsDialog from "./credentials-dialog";
 // PARTS 2–5
 import StudentRegistrationForm from "./student-registration-form";
 import TeacherRegistrationForm from "./TeacherRegistrationForm";
-import ParentRegistrationForm from "./parent-registration-form";
+
 import BulkImport from "./bulk-import";
 
 export default function RegistrationTabs() {
@@ -60,9 +60,7 @@ export default function RegistrationTabs() {
           <TeacherRegistrationForm onSuccess={showCredentials} />
         </TabsContent>
 
-        <TabsContent value="parents">
-          <ParentRegistrationForm onSuccess={showCredentials} />
-        </TabsContent>
+       
 
         <TabsContent value="bulk">
           <BulkImport />
