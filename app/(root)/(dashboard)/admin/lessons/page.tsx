@@ -19,6 +19,7 @@ import { LessonEmptyState } from "@/components/lessons/LessonEmptyState";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
+
 import {
   Select,
   SelectContent,
@@ -31,21 +32,21 @@ export default function SuperAdminLessonsPage() {
   const [lessons, setLessons] = useState<LessonResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingFilters, setLoadingFilters] = useState(true);
-  const [loadingSubjects, setLoadingSubjects] = useState(false);
 
   const [weekNumber, setWeekNumber] = useState("");
 
   const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
-  const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
   const [sessions, setSessions] = useState<{ id: string; name: string }[]>([]);
   const [terms, setTerms] = useState<{ id: string; name: string }[]>([]);
 
   const [classId, setClassId] = useState("");
-  const [subjectId, setSubjectId] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [termId, setTermId] = useState("");
 
-  // Load classes, sessions, terms only
+  // =========================================================
+  // LOAD FILTERS
+  // =========================================================
+
   async function loadFilters() {
     try {
       setLoadingFilters(true);
@@ -60,17 +61,9 @@ export default function SuperAdminLessonsPage() {
       setSessions(sessionData);
       setTerms(termData);
 
-      if (classData.length > 0) {
-        setClassId(classData[0].id);
-      }
-
-      if (sessionData.length > 0) {
-        setSessionId(sessionData[0].id);
-      }
-
-      if (termData.length > 0) {
-        setTermId(termData[0].id);
-      }
+      if (classData.length > 0) setClassId(classData[0].id);
+      if (sessionData.length > 0) setSessionId(sessionData[0].id);
+      if (termData.length > 0) setTermId(termData[0].id);
     } catch (error) {
       console.error(error);
       toast.error("Failed to load filters.");
@@ -79,51 +72,19 @@ export default function SuperAdminLessonsPage() {
     }
   }
 
-  // Load subjects for selected class
-  async function loadClassSubjects(classTemplateId: string) {
-    if (!classTemplateId) {
-      setSubjects([]);
-      setSubjectId("");
-      return;
-    }
-
-    try {
-      setLoadingSubjects(true);
-
-      const data =
-        await SuperAdminLessonService.getClassSubjects(classTemplateId);
-
-      setSubjects(data);
-
-      if (data.length > 0) {
-        setSubjectId(data[0].id);
-      } else {
-        setSubjectId("");
-      }
-    } catch (error: any) {
-      console.error(error);
-
-      setSubjects([]);
-      setSubjectId("");
-
-      toast.error(
-        error?.response?.data?.detail ??
-          "Failed to load subjects for this class.",
-      );
-    } finally {
-      setLoadingSubjects(false);
-    }
-  }
+  // =========================================================
+  // LOAD LESSONS
+  // =========================================================
 
   async function loadLessons(selectedWeek?: number) {
-    if (!classId || !subjectId || !sessionId || !termId) return;
+    if (!classId || !sessionId || !termId) return;
 
     try {
       setLoading(true);
 
       const data = await SuperAdminLessonService.getLessons({
         classTemplateId: classId,
-        subjectTemplateId: subjectId,
+        subjectTemplateId: "",
         sessionId,
         termId,
         weekNumber: selectedWeek,
@@ -137,24 +98,23 @@ export default function SuperAdminLessonsPage() {
     }
   }
 
-  // Initial load
+  // =========================================================
+  // INITIAL LOAD
+  // =========================================================
+
   useEffect(() => {
     void Promise.resolve().then(() => loadFilters());
   }, []);
 
-  // Load subjects when class changes
-  useEffect(() => {
-    if (classId) {
-      void Promise.resolve().then(() => loadClassSubjects(classId));
-    }
-  }, [classId]);
+  // =========================================================
+  // RELOAD WHEN FILTERS CHANGE
+  // =========================================================
 
-  // Load lessons when filters are ready
   useEffect(() => {
-    if (classId && subjectId && sessionId && termId && !loadingSubjects) {
+    if (classId && sessionId && termId) {
       void Promise.resolve().then(() => loadLessons());
     }
-  }, [classId, subjectId, sessionId, termId, loadingSubjects]);
+  }, [classId, sessionId, termId]);
 
   function handleApplyFilter() {
     if (!weekNumber) {
@@ -173,6 +133,7 @@ export default function SuperAdminLessonsPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
       {/* Header */}
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Lesson Notes</h1>
@@ -191,19 +152,14 @@ export default function SuperAdminLessonsPage() {
       </div>
 
       {/* Filters */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+
+      <div className="grid gap-4 md:grid-cols-3">
         {/* Class */}
+
         <div className="space-y-2">
           <Label>Class</Label>
 
-          <Select
-            value={classId}
-            onValueChange={(value) => {
-              setClassId(value);
-              setSubjectId("");
-              setLessons([]);
-            }}
-          >
+          <Select value={classId} onValueChange={setClassId}>
             <SelectTrigger>
               <SelectValue placeholder="Select class" />
             </SelectTrigger>
@@ -218,44 +174,8 @@ export default function SuperAdminLessonsPage() {
           </Select>
         </div>
 
-        {/* Subject */}
-        <div className="space-y-2">
-          <Label>Subject</Label>
-
-          <Select
-            value={subjectId}
-            onValueChange={setSubjectId}
-            disabled={!classId || loadingSubjects || subjects.length === 0}
-          >
-            <SelectTrigger>
-              <SelectValue
-                placeholder={
-                  loadingSubjects
-                    ? "Loading subjects..."
-                    : subjects.length === 0
-                      ? "No subjects available"
-                      : "Select subject"
-                }
-              />
-            </SelectTrigger>
-
-            <SelectContent>
-              {subjects.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {classId && subjects.length === 0 && !loadingSubjects && (
-            <p className="text-xs text-muted-foreground">
-              No subjects have been assigned to this class.
-            </p>
-          )}
-        </div>
-
         {/* Session */}
+
         <div className="space-y-2">
           <Label>Session</Label>
 
@@ -275,6 +195,7 @@ export default function SuperAdminLessonsPage() {
         </div>
 
         {/* Term */}
+
         <div className="space-y-2">
           <Label>Term</Label>
 
@@ -295,6 +216,7 @@ export default function SuperAdminLessonsPage() {
       </div>
 
       {/* Week Filter */}
+
       <LessonFilters
         weekNumber={weekNumber}
         onWeekNumberChange={setWeekNumber}
@@ -303,6 +225,7 @@ export default function SuperAdminLessonsPage() {
       />
 
       {/* Content */}
+
       {loading || loadingFilters ? (
         <div className="space-y-3">
           <Skeleton className="h-12 w-full" />

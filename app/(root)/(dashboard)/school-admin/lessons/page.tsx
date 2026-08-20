@@ -11,7 +11,6 @@ import {
 } from "@/app/services/school-admin-lesson.service";
 
 import { SchoolAdminService } from "@/app/services/school-admin.service";
-
 import { useAcademicPeriod } from "@/app/hooks/use-academic-period";
 
 import { LessonFilters } from "@/components/lessons/LessonFilters";
@@ -32,23 +31,19 @@ import {
 export default function SchoolAdminLessonsPage() {
   const [lessons, setLessons] = useState<LessonResponse[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [weekNumber, setWeekNumber] = useState("");
 
   const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
-  const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
-
   const [classId, setClassId] = useState("");
-  const [subjectId, setSubjectId] = useState("");
 
   const { session, term, loading: academicLoading } = useAcademicPeriod();
 
   const sessionId = session?.id ?? "";
   const termId = term?.id ?? "";
 
-  /* =========================================================
-     LOAD CLASSES
-  ========================================================= */
+  // =========================================================
+  // LOAD CLASSES
+  // =========================================================
 
   async function loadFilters() {
     try {
@@ -64,43 +59,19 @@ export default function SchoolAdminLessonsPage() {
     }
   }
 
-  /* =========================================================
-     LOAD SUBJECTS FOR SELECTED CLASS
-  ========================================================= */
-
-  async function loadSubjectsForClass(selectedClassId: string) {
-    try {
-      setSubjects([]);
-      setSubjectId("");
-
-      const data = await SchoolAdminService.getClassSubjects(selectedClassId);
-
-      // backend may return array directly or { subjects: [] }
-      const classSubjects = Array.isArray(data) ? data : (data.subjects ?? []);
-
-      setSubjects(classSubjects);
-
-      if (classSubjects.length > 0) {
-        setSubjectId(classSubjects[0].id);
-      }
-    } catch {
-      toast.error("Failed to load subjects for selected class.");
-    }
-  }
-
-  /* =========================================================
-     LOAD LESSONS
-  ========================================================= */
+  // =========================================================
+  // LOAD LESSONS
+  // =========================================================
 
   async function loadLessons(selectedWeek?: number) {
-    if (!classId || !subjectId || !sessionId || !termId) return;
+    if (!classId || !sessionId || !termId) return;
 
     try {
       setLoading(true);
 
       const data = await SchoolAdminLessonService.getLessons({
         classId,
-        subjectId,
+        subjectId: "",
         sessionId,
         termId,
         weekNumber: selectedWeek,
@@ -114,33 +85,23 @@ export default function SchoolAdminLessonsPage() {
     }
   }
 
-  /* =========================================================
-     INITIAL LOAD
-  ========================================================= */
+  // =========================================================
+  // INITIAL LOAD
+  // =========================================================
 
   useEffect(() => {
     void Promise.resolve().then(() => loadFilters());
   }, []);
 
-  /* =========================================================
-     WHEN CLASS CHANGES -> LOAD SUBJECTS
-  ========================================================= */
+  // =========================================================
+  // RELOAD WHEN FILTERS CHANGE
+  // =========================================================
 
   useEffect(() => {
-    if (classId) {
-      void Promise.resolve().then(() => loadSubjectsForClass(classId));
-    }
-  }, [classId]);
-
-  /* =========================================================
-     WHEN FILTERS CHANGE -> LOAD LESSONS
-  ========================================================= */
-
-  useEffect(() => {
-    if (!academicLoading && sessionId && termId && classId && subjectId) {
+    if (!academicLoading && sessionId && termId && classId) {
       void Promise.resolve().then(() => loadLessons());
     }
-  }, [academicLoading, sessionId, termId, classId, subjectId]);
+  }, [academicLoading, sessionId, termId, classId]);
 
   function handleApplyFilter() {
     if (!weekNumber) {
@@ -159,68 +120,37 @@ export default function SchoolAdminLessonsPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
       {/* Header */}
+
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Lesson Notes</h1>
 
-        <p className="text-muted-foreground mt-1">
-          Browse published lesson notes for classes and subjects in your school.
+        <p className="mt-1 text-muted-foreground">
+          Browse published lesson notes for classes in your school.
         </p>
       </div>
 
-      {/* Filters */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Class */}
-        <div className="space-y-2">
-          <Label>Class</Label>
+      {/* Class Filter */}
 
-          <Select value={classId} onValueChange={setClassId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select class" />
-            </SelectTrigger>
+      <div className="max-w-sm space-y-2">
+        <Label>Class</Label>
 
-            <SelectContent>
-              {classes.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={classId} onValueChange={setClassId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select class" />
+          </SelectTrigger>
 
-        {/* Subject */}
-        <div className="space-y-2">
-          <Label>Subject</Label>
-
-          <Select
-            value={subjectId}
-            onValueChange={setSubjectId}
-            disabled={!classId || subjects.length === 0}
-          >
-            <SelectTrigger>
-              <SelectValue
-                placeholder={
-                  classId
-                    ? subjects.length
-                      ? "Select subject"
-                      : "No subjects assigned"
-                    : "Select class first"
-                }
-              />
-            </SelectTrigger>
-
-            <SelectContent>
-              {subjects.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <SelectContent>
+            {classes.map((item) => (
+              <SelectItem key={item.id} value={item.id}>
+                {item.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Week Filter */}
+
       <LessonFilters
         weekNumber={weekNumber}
         onWeekNumberChange={setWeekNumber}
@@ -229,6 +159,7 @@ export default function SchoolAdminLessonsPage() {
       />
 
       {/* Content */}
+
       {loading || academicLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-12 w-full" />
@@ -246,7 +177,6 @@ export default function SchoolAdminLessonsPage() {
           lessons={lessons.map((lesson) => ({
             id: lesson.id,
             week_number: lesson.week_number,
-
             class_name: lesson.class_name,
             subject_name: lesson.subject_name,
             topic: lesson.topic,
