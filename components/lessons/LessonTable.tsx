@@ -32,12 +32,10 @@ export function LessonTable({ lessons, basePath }: LessonTableProps) {
       <Table className="min-w-full">
         <TableHeader className="bg-muted/50">
           <TableRow className="hover:bg-muted/50">
-            <TableHead className="w-[120px] font-semibold">Week</TableHead>
-
+            <TableHead className="w-[100px] font-semibold">Week</TableHead>
+            <TableHead className="w-[180px] font-semibold">Subject</TableHead>
             <TableHead className="font-semibold">Topic</TableHead>
-
             <TableHead className="font-semibold">Title</TableHead>
-
             <TableHead className="text-right font-semibold">Action</TableHead>
           </TableRow>
         </TableHeader>
@@ -50,6 +48,10 @@ export function LessonTable({ lessons, basePath }: LessonTableProps) {
             >
               <TableCell className="font-medium text-foreground">
                 Week {lesson.week_number}
+              </TableCell>
+
+              <TableCell className="max-w-[180px] truncate text-foreground">
+                {lesson.subject_name}
               </TableCell>
 
               <TableCell className="max-w-[260px] truncate text-foreground">

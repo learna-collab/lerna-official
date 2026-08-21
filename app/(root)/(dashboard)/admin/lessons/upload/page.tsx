@@ -37,7 +37,6 @@ export default function UploadLessonPage() {
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [checkingExisting, setCheckingExisting] = useState(false);
 
-  // Form state
   const [classTemplateId, setClassTemplateId] = useState("");
   const [subjectTemplateId, setSubjectTemplateId] = useState("");
   const [sessionId, setSessionId] = useState("");
@@ -45,16 +44,18 @@ export default function UploadLessonPage() {
   const [weekNumber, setWeekNumber] = useState("1");
   const [file, setFile] = useState<File | null>(null);
 
-  // Existing uploaded lesson
   const [existingLesson, setExistingLesson] = useState<LessonResponse | null>(
     null,
   );
 
-  // API-loaded options
   const [classes, setClasses] = useState<Option[]>([]);
   const [subjects, setSubjects] = useState<Option[]>([]);
   const [sessions, setSessions] = useState<Option[]>([]);
   const [terms, setTerms] = useState<Option[]>([]);
+
+  // -------------------------------------------------------
+  // Load initial options
+  // -------------------------------------------------------
 
   async function loadOptions() {
     try {
@@ -70,17 +71,9 @@ export default function UploadLessonPage() {
       setSessions(sessionData);
       setTerms(termData);
 
-      if (classData.length > 0) {
-        setClassTemplateId(classData[0].id);
-      }
-
-      if (sessionData.length > 0) {
-        setSessionId(sessionData[0].id);
-      }
-
-      if (termData.length > 0) {
-        setTermId(termData[0].id);
-      }
+      if (classData.length) setClassTemplateId(classData[0].id);
+      if (sessionData.length) setSessionId(sessionData[0].id);
+      if (termData.length) setTermId(termData[0].id);
     } catch (error: any) {
       toast.error(
         error?.response?.data?.detail ?? "Failed to load lesson options.",
@@ -90,7 +83,10 @@ export default function UploadLessonPage() {
     }
   }
 
-  // Load subjects for selected class
+  // -------------------------------------------------------
+  // Load subjects
+  // -------------------------------------------------------
+
   async function loadClassSubjects(classId: string) {
     if (!classId) {
       setSubjects([]);
@@ -105,8 +101,7 @@ export default function UploadLessonPage() {
 
       setSubjects(data);
 
-      // Auto-select first subject
-      if (data.length > 0) {
+      if (data.length) {
         setSubjectTemplateId(data[0].id);
       } else {
         setSubjectTemplateId("");
@@ -124,7 +119,10 @@ export default function UploadLessonPage() {
     }
   }
 
-  // Load existing uploaded lesson for the selected filters
+  // -------------------------------------------------------
+  // Check if lesson already exists
+  // -------------------------------------------------------
+
   async function loadExistingLesson() {
     if (
       !classTemplateId ||
@@ -149,12 +147,15 @@ export default function UploadLessonPage() {
       });
 
       const match =
-        lessons.find((lesson) => lesson.week_number === Number(weekNumber)) ??
-        null;
+        lessons.find(
+          (lesson) =>
+            lesson.week_number === Number(weekNumber) &&
+            lesson.subject_name ===
+              subjects.find((s) => s.id === subjectTemplateId)?.name,
+        ) ?? null;
 
       setExistingLesson(match);
-    } catch (error) {
-      console.error(error);
+    } catch {
       setExistingLesson(null);
     } finally {
       setCheckingExisting(false);
@@ -165,17 +166,29 @@ export default function UploadLessonPage() {
     void Promise.resolve().then(() => loadOptions());
   }, []);
 
-  // Reload subjects whenever class changes
   useEffect(() => {
     if (classTemplateId) {
       void Promise.resolve().then(() => loadClassSubjects(classTemplateId));
     }
   }, [classTemplateId]);
 
-  // Check existing lesson whenever filters change
   useEffect(() => {
-    void Promise.resolve().then(() => loadExistingLesson());
+    if (
+      classTemplateId &&
+      subjectTemplateId &&
+      sessionId &&
+      termId &&
+      weekNumber
+    ) {
+      void Promise.resolve().then(() => loadExistingLesson());
+    } else {
+      void Promise.resolve().then(() => setExistingLesson(null));
+    }
   }, [classTemplateId, subjectTemplateId, sessionId, termId, weekNumber]);
+
+  // -------------------------------------------------------
+  // Submit
+  // -------------------------------------------------------
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -217,16 +230,17 @@ export default function UploadLessonPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
+    <div className="mx-auto max-w-4xl space-y-6 p-6">
       {/* Header */}
+
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
-          Upload Daily Lesson
+          Upload Lesson Note
         </h1>
 
-        <p className="mt-1 text-muted-foreground">
-          Upload a DOCX or PDF lesson note. The ALF sections will be extracted
-          automatically.
+        <p className="mt-2 text-muted-foreground">
+          Upload a DOCX or PDF lesson note. The system will automatically
+          extract the ALF sections and create the lesson.
         </p>
       </div>
 
@@ -237,162 +251,164 @@ export default function UploadLessonPage() {
 
         <CardContent>
           {loadingOptions ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">
+            <div className="py-12 text-center text-sm text-muted-foreground">
               Loading lesson options...
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Class */}
-              <div className="space-y-2">
-                <Label>Class</Label>
+              {/* Form Grid */}
 
-                <Select
-                  value={classTemplateId}
-                  onValueChange={(value) => {
-                    setClassTemplateId(value);
-                    setSubjectTemplateId("");
-                    setExistingLesson(null);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select class" />
-                  </SelectTrigger>
+              <div className="grid gap-5 md:grid-cols-2">
+                {/* Class */}
 
-                  <SelectContent>
-                    {classes.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className="space-y-2">
+                  <Label>Class</Label>
 
-              {/* Subject */}
-              <div className="space-y-2">
-                <Label>Subject</Label>
+                  <Select
+                    value={classTemplateId}
+                    onValueChange={(value) => {
+                      setClassTemplateId(value);
+                      setSubjectTemplateId("");
+                      setExistingLesson(null);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select class" />
+                    </SelectTrigger>
 
-                <Select
-                  value={subjectTemplateId}
-                  onValueChange={setSubjectTemplateId}
-                  disabled={
-                    !classTemplateId || loadingSubjects || subjects.length === 0
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        loadingSubjects
-                          ? "Loading subjects..."
-                          : subjects.length === 0
-                            ? "No subjects available"
-                            : "Select subject"
-                      }
-                    />
-                  </SelectTrigger>
+                    <SelectContent>
+                      {classes.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                  <SelectContent>
-                    {subjects.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Subject */}
 
-                {classTemplateId &&
-                  subjects.length === 0 &&
-                  !loadingSubjects && (
-                    <p className="text-xs text-muted-foreground">
-                      No subjects have been assigned to this class template.
-                    </p>
-                  )}
-              </div>
+                <div className="space-y-2">
+                  <Label>Subject</Label>
 
-              {/* Session */}
-              <div className="space-y-2">
-                <Label>Session</Label>
+                  <Select
+                    value={subjectTemplateId}
+                    onValueChange={setSubjectTemplateId}
+                    disabled={
+                      !classTemplateId ||
+                      loadingSubjects ||
+                      subjects.length === 0
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          loadingSubjects
+                            ? "Loading subjects..."
+                            : subjects.length === 0
+                              ? "No subjects available"
+                              : "Select subject"
+                        }
+                      />
+                    </SelectTrigger>
 
-                <Select value={sessionId} onValueChange={setSessionId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select session" />
-                  </SelectTrigger>
+                    <SelectContent>
+                      {subjects.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                  <SelectContent>
-                    {sessions.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                {/* Session */}
 
-              {/* Term */}
-              <div className="space-y-2">
-                <Label>Term</Label>
+                <div className="space-y-2">
+                  <Label>Session</Label>
 
-                <Select value={termId} onValueChange={setTermId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select term" />
-                  </SelectTrigger>
+                  <Select value={sessionId} onValueChange={setSessionId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select session" />
+                    </SelectTrigger>
 
-                  <SelectContent>
-                    {terms.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    <SelectContent>
+                      {sessions.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* Week Number */}
-              <div className="space-y-2">
-                <Label>Week Number</Label>
+                {/* Term */}
 
-                <Input
-                  type="number"
-                  min={1}
-                  value={weekNumber}
-                  onChange={(e) => setWeekNumber(e.target.value)}
-                />
+                <div className="space-y-2">
+                  <Label>Term</Label>
+
+                  <Select value={termId} onValueChange={setTermId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select term" />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      {terms.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Week */}
+
+                <div className="space-y-2">
+                  <Label>Week Number</Label>
+
+                  <Input
+                    type="number"
+                    min={1}
+                    value={weekNumber}
+                    onChange={(e) => setWeekNumber(e.target.value)}
+                  />
+                </div>
               </div>
 
               {/* Existing Lesson */}
+
               {checkingExisting ? (
-                <div className="flex items-center gap-2 rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
                   <RefreshCw className="h-4 w-4 animate-spin" />
-                  Checking for existing lesson...
+                  Checking this lesson slot...
                 </div>
               ) : existingLesson ? (
-                <div className="space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
-                  <div className="flex items-start justify-between gap-3">
+                <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+                  <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-medium text-amber-900">
-                        Lesson already uploaded for Week{" "}
-                        {existingLesson.week_number}
-                      </p>
+                      <h3 className="font-semibold text-amber-900">
+                        Existing lesson found
+                      </h3>
 
-                      <p className="text-sm text-amber-800">
-                        Uploading a new file will replace the existing lesson.
+                      <p className="mt-1 text-sm text-amber-800">
+                        Week {existingLesson.week_number} •{" "}
+                        {existingLesson.subject_name}
                       </p>
                     </div>
 
                     <FileText className="h-5 w-5 text-amber-700" />
                   </div>
 
-                  <div className="rounded-lg border border-amber-200 bg-white p-3 text-sm">
-                    <p className="font-medium text-slate-900">
-                      {existingLesson.title}
-                    </p>
+                  <div className="mt-3 rounded-lg bg-white p-3">
+                    <p className="font-medium">{existingLesson.title}</p>
 
-                    <p className="text-slate-600">
-                      Topic: {existingLesson.topic}
+                    <p className="text-sm text-muted-foreground">
+                      {existingLesson.topic}
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="mt-3 flex gap-2">
                     <Button
                       type="button"
                       variant="outline"
@@ -402,7 +418,7 @@ export default function UploadLessonPage() {
                       }
                     >
                       <Eye className="mr-2 h-4 w-4" />
-                      View Lesson
+                      View
                     </Button>
 
                     <Button
@@ -417,29 +433,34 @@ export default function UploadLessonPage() {
                       }
                     >
                       <ExternalLink className="mr-2 h-4 w-4" />
-                      Open in New Tab
+                      Open
                     </Button>
                   </div>
+
+                  <p className="mt-3 text-xs text-amber-900">
+                    Uploading a new file will replace this lesson.
+                  </p>
                 </div>
               ) : null}
 
-              {/* File Upload */}
-              <div className="space-y-2">
+              {/* Upload */}
+
+              <div className="space-y-3">
                 <Label>
-                  {existingLesson
-                    ? "Replace Lesson File (DOCX or PDF)"
-                    : "Lesson File (DOCX or PDF)"}
+                  {existingLesson ? "Replace Lesson File" : "Lesson File"}
                 </Label>
 
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed p-8 text-center transition hover:bg-muted/50">
-                  <Upload className="mb-3 h-8 w-8 text-muted-foreground" />
+                <label className="group flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 p-8 transition hover:border-blue-500 hover:bg-blue-50/50">
+                  <Upload className="mb-3 h-10 w-10 text-slate-500 group-hover:text-blue-600" />
 
-                  <span className="text-sm font-medium">
-                    Click to choose a file
+                  <span className="font-semibold">
+                    {existingLesson
+                      ? "Choose replacement file"
+                      : "Choose lesson file"}
                   </span>
 
-                  <span className="text-xs text-muted-foreground">
-                    Supported formats: .docx, .pdf
+                  <span className="mt-1 text-sm text-muted-foreground">
+                    DOCX or PDF • Click to browse
                   </span>
 
                   <input
@@ -451,16 +472,17 @@ export default function UploadLessonPage() {
                 </label>
 
                 {file && (
-                  <div className="flex items-center gap-2 rounded-lg border p-3 text-sm">
+                  <div className="flex items-center gap-2 rounded-lg border bg-muted/30 p-3 text-sm">
                     <FileText className="h-4 w-4 text-muted-foreground" />
 
-                    <span className="truncate">{file.name}</span>
+                    <span className="truncate font-medium">{file.name}</span>
                   </div>
                 )}
               </div>
 
               {/* Actions */}
-              <div className="flex justify-end gap-3">
+
+              <div className="flex justify-end gap-3 border-t pt-4">
                 <Button
                   type="button"
                   variant="outline"
