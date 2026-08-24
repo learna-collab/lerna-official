@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -38,10 +39,11 @@ import { Badge } from "@/components/ui/badge";
 export default function SchoolsPage() {
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [creating, setCreating] = useState(false);
+  const [togglingSchoolId, setTogglingSchoolId] = useState<string | null>(null);
 
   const [openCreate, setOpenCreate] = useState(false);
-
   const [openCredentials, setOpenCredentials] = useState(false);
 
   const [credentials, setCredentials] = useState({
@@ -59,9 +61,14 @@ export default function SchoolsPage() {
 
       const res = await AdminService.getSchools();
 
-      setSchools(res.schools ?? res);
-      console.log("Schools loaded", res.schools ?? res);
-    } catch {
+      const data = res.schools ?? res;
+
+      setSchools(data);
+
+      console.log("Schools loaded:", data);
+    } catch (err) {
+      console.error("Failed to load schools:", err);
+
       toast.error("Failed to load schools");
     } finally {
       setLoading(false);
@@ -76,17 +83,21 @@ export default function SchoolsPage() {
   // CREATE SCHOOL
   // ==========================================
 
-  // ==========================================
-  // CREATE SCHOOL
-  // ==========================================
-
   async function createSchool(payload: CreateSchoolPayload) {
+    if (creating) {
+      return;
+    }
+
     try {
       setCreating(true);
 
       const res = await AdminService.createSchool(payload);
 
       toast.success(res.message ?? "School created successfully");
+
+      // ========================================
+      // SHOW GENERATED SCHOOL CREDENTIALS
+      // ========================================
 
       if (res.credentials) {
         setCredentials({
@@ -101,35 +112,48 @@ export default function SchoolsPage() {
 
       await loadSchools();
     } catch (err: any) {
-      toast.error(
+      console.error("Create school error:", err);
+
+      const detail =
         err?.response?.data?.detail ??
-          err?.response?.data?.message ??
-          "Unable to create school.",
-      );
+        err?.response?.data?.message ??
+        "Unable to create school.";
+
+      toast.error(detail);
     } finally {
       setCreating(false);
     }
   }
 
   // ==========================================
-  // ENABLE / DISABLE
+  // ENABLE / DISABLE SCHOOL
   // ==========================================
 
   async function toggleSchool(school: School) {
+    if (togglingSchoolId) {
+      return;
+    }
+
     try {
+      setTogglingSchoolId(school.id);
+
       if (school.is_active) {
         await AdminService.disableSchool(school.id);
 
-        toast.success("School disabled");
+        toast.success(`${school.name} disabled successfully`);
       } else {
         await AdminService.enableSchool(school.id);
 
-        toast.success("School enabled");
+        toast.success(`${school.name} enabled successfully`);
       }
 
       await loadSchools();
-    } catch {
+    } catch (err) {
+      console.error("Toggle school error:", err);
+
       toast.error("Operation failed.");
+    } finally {
+      setTogglingSchoolId(null);
     }
   }
 
@@ -137,16 +161,24 @@ export default function SchoolsPage() {
   // COPY TO CLIPBOARD
   // ==========================================
 
-  function copy(text: string, label: string) {
-    navigator.clipboard.writeText(text);
+  async function copy(text: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(text);
 
-    toast.success(`${label} copied`);
+      toast.success(`${label} copied`);
+    } catch (err) {
+      console.error("Clipboard error:", err);
+
+      toast.error(`Unable to copy ${label.toLowerCase()}`);
+    }
   }
 
   return (
     <>
       <div className="space-y-6 p-8">
-        {/* HEADER */}
+        {/* ==========================================
+            HEADER
+        ========================================== */}
 
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -158,9 +190,11 @@ export default function SchoolsPage() {
             </p>
           </div>
 
+          {/* CREATE SCHOOL */}
+
           <Dialog open={openCreate} onOpenChange={setOpenCreate}>
             <DialogTrigger asChild>
-              <Button>Create School</Button>
+              <Button disabled={creating}>Create School</Button>
             </DialogTrigger>
 
             <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
@@ -173,7 +207,9 @@ export default function SchoolsPage() {
           </Dialog>
         </div>
 
-        {/* TABLE CARD */}
+        {/* ==========================================
+            REGISTERED SCHOOLS
+        ========================================== */}
 
         <Card>
           <CardHeader>
@@ -195,113 +231,154 @@ export default function SchoolsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>School</TableHead>
+
                       <TableHead>Admin</TableHead>
+
                       <TableHead>Username</TableHead>
+
                       <TableHead>Password</TableHead>
+
                       <TableHead>Status</TableHead>
+
                       <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
 
                   <TableBody>
-                    {schools.map((school) => (
-                      <TableRow key={school.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-semibold">{school.name}</p>
+                    {schools.map((school) => {
+                      const admin = school.admin;
 
-                            <p className="text-xs text-muted-foreground">
-                              {school.slug}
-                            </p>
-                          </div>
-                        </TableCell>
+                      const isToggling = togglingSchoolId === school.id;
 
-                        <TableCell>
-                          <div>
-                            <p>
-                              {school.admin?.first_name}{" "}
-                              {school.admin?.last_name}
-                            </p>
+                      return (
+                        <TableRow key={school.id}>
+                          {/* ==================================
+                              SCHOOL
+                          ================================== */}
 
-                            <p className="text-xs text-muted-foreground">
-                              {school.admin?.email}
-                            </p>
-                          </div>
-                        </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-semibold">{school.name}</p>
 
-                        <TableCell>
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-mono text-sm">
-                              {school.admin?.username ?? "-"}
-                            </span>
+                              <p className="text-xs text-muted-foreground">
+                                {school.slug}
+                              </p>
+                            </div>
+                          </TableCell>
 
-                            {school.admin?.username && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() =>
-                                  copy(school.admin!.username!, "Username")
-                                }
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+                          {/* ==================================
+                              ADMIN
+                          ================================== */}
 
-                        <TableCell>
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-mono text-sm">
-                              {school.admin?.password ?? "-"}
-                            </span>
+                          <TableCell>
+                            <div>
+                              <p>
+                                {admin?.first_name ?? "-"}{" "}
+                                {admin?.last_name ?? ""}
+                              </p>
 
-                            {school.admin?.password && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() =>
-                                  copy(school.admin!.password!, "Password")
-                                }
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+                              <p className="text-xs text-muted-foreground">
+                                {admin?.email ?? "-"}
+                              </p>
+                            </div>
+                          </TableCell>
 
-                        <TableCell>
-                          <Badge
-                            variant={
-                              school.is_active ? "default" : "destructive"
-                            }
-                          >
-                            {school.is_active ? "Active" : "Disabled"}
-                          </Badge>
-                        </TableCell>
+                          {/* ==================================
+                              USERNAME
+                          ================================== */}
 
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant={
-                              school.is_active ? "destructive" : "default"
-                            }
-                            onClick={() => toggleSchool(school)}
-                          >
-                            {school.is_active ? (
-                              <>
-                                <PowerOff className="mr-2 h-4 w-4" />
-                                Disable
-                              </>
-                            ) : (
-                              <>
-                                <Power className="mr-2 h-4 w-4" />
-                                Enable
-                              </>
-                            )}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          <TableCell>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-mono text-sm">
+                                {admin?.username ?? "-"}
+                              </span>
+
+                              {admin?.username && (
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() =>
+                                    copy(admin.username!, "Username")
+                                  }
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          {/* ==================================
+                              PASSWORD
+                          ================================== */}
+
+                          <TableCell>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-mono text-sm">
+                                {admin?.password ?? "-"}
+                              </span>
+
+                              {admin?.password && (
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() =>
+                                    copy(admin.password!, "Password")
+                                  }
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          {/* ==================================
+                              STATUS
+                          ================================== */}
+
+                          <TableCell>
+                            <Badge
+                              variant={
+                                school.is_active ? "default" : "destructive"
+                              }
+                            >
+                              {school.is_active ? "Active" : "Disabled"}
+                            </Badge>
+                          </TableCell>
+
+                          {/* ==================================
+                              ACTION
+                          ================================== */}
+
+                          <TableCell className="text-right">
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={isToggling}
+                              variant={
+                                school.is_active ? "destructive" : "default"
+                              }
+                              onClick={() => toggleSchool(school)}
+                            >
+                              {school.is_active ? (
+                                <>
+                                  <PowerOff className="mr-2 h-4 w-4" />
+
+                                  {isToggling ? "Disabling..." : "Disable"}
+                                </>
+                              ) : (
+                                <>
+                                  <Power className="mr-2 h-4 w-4" />
+
+                                  {isToggling ? "Enabling..." : "Enable"}
+                                </>
+                              )}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -310,9 +387,9 @@ export default function SchoolsPage() {
         </Card>
       </div>
 
-      {/* ====================================== */}
-      {/* SCHOOL ADMIN CREDENTIALS */}
-      {/* ====================================== */}
+      {/* ==========================================
+          SCHOOL ADMIN CREDENTIALS
+      ========================================== */}
 
       <Dialog open={openCredentials} onOpenChange={setOpenCredentials}>
         <DialogContent className="sm:max-w-lg">
@@ -321,6 +398,8 @@ export default function SchoolsPage() {
           </DialogHeader>
 
           <div className="space-y-6">
+            {/* INFORMATION */}
+
             <div className="rounded-xl border bg-green-50 p-4">
               <h3 className="font-semibold text-green-700">
                 School Administrator Login
@@ -332,7 +411,11 @@ export default function SchoolsPage() {
               </p>
             </div>
 
+            {/* CREDENTIALS */}
+
             <div className="space-y-4">
+              {/* USERNAME */}
+
               <div>
                 <label className="text-sm font-medium">Username</label>
 
@@ -340,6 +423,7 @@ export default function SchoolsPage() {
                   <span className="font-mono">{credentials.username}</span>
 
                   <Button
+                    type="button"
                     size="icon"
                     variant="ghost"
                     onClick={() => copy(credentials.username, "Username")}
@@ -349,6 +433,8 @@ export default function SchoolsPage() {
                 </div>
               </div>
 
+              {/* PASSWORD */}
+
               <div>
                 <label className="text-sm font-medium">Password</label>
 
@@ -356,6 +442,7 @@ export default function SchoolsPage() {
                   <span className="font-mono">{credentials.password}</span>
 
                   <Button
+                    type="button"
                     size="icon"
                     variant="ghost"
                     onClick={() => copy(credentials.password, "Password")}
@@ -366,7 +453,10 @@ export default function SchoolsPage() {
               </div>
             </div>
 
+            {/* DONE */}
+
             <Button
+              type="button"
               className="w-full"
               onClick={() => setOpenCredentials(false)}
             >
