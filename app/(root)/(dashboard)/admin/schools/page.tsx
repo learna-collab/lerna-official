@@ -3,13 +3,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Copy, Power, PowerOff } from "lucide-react";
 
-import { School } from "@/app/types/school";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Download,
+  Loader2,
+  Pencil,
+  Power,
+  PowerOff,
+  Search,
+} from "lucide-react";
+
+import { toast } from "sonner";
+
 import {
   AdminService,
   CreateSchoolPayload,
+  School,
+  UpdateSchoolPayload,
 } from "@/app/services/admin.service";
 
 import SchoolForm from "@/components/admin/school-form";
@@ -34,16 +47,66 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { Button } from "@/components/ui/button";
+
 import { Badge } from "@/components/ui/badge";
 
+import { Input } from "@/components/ui/input";
+
+const PER_PAGE = 10;
+
 export default function SchoolsPage() {
+  // ==========================================
+  // SCHOOLS
+  // ==========================================
+
   const [schools, setSchools] = useState<School[]>([]);
+
   const [loading, setLoading] = useState(true);
 
+  // ==========================================
+  // SEARCH
+  // ==========================================
+
+  const [search, setSearch] = useState("");
+
+  // ==========================================
+  // PAGINATION
+  // ==========================================
+
+  const [page, setPage] = useState(1);
+
+  const [total, setTotal] = useState(0);
+
+  const [totalPages, setTotalPages] = useState(1);
+
+  // ==========================================
+  // CREATE
+  // ==========================================
+
   const [creating, setCreating] = useState(false);
-  const [togglingSchoolId, setTogglingSchoolId] = useState<string | null>(null);
 
   const [openCreate, setOpenCreate] = useState(false);
+
+  // ==========================================
+  // EDIT
+  // ==========================================
+
+  const [editingSchool, setEditingSchool] = useState<School | null>(null);
+
+  const [openEdit, setOpenEdit] = useState(false);
+
+  const [updating, setUpdating] = useState(false);
+
+  // ==========================================
+  // ENABLE / DISABLE
+  // ==========================================
+
+  const [togglingSchoolId, setTogglingSchoolId] = useState<string | null>(null);
+
+  // ==========================================
+  // CREDENTIALS
+  // ==========================================
+
   const [openCredentials, setOpenCredentials] = useState(false);
 
   const [credentials, setCredentials] = useState({
@@ -52,20 +115,39 @@ export default function SchoolsPage() {
   });
 
   // ==========================================
+  // EXCEL EXPORT
+  // ==========================================
+
+  const [exporting, setExporting] = useState(false);
+
+  // ==========================================
   // LOAD SCHOOLS
   // ==========================================
 
-  async function loadSchools() {
+  async function loadSchools(requestedPage = page, requestedSearch = search) {
     try {
       setLoading(true);
 
-      const res = await AdminService.getSchools();
+      const res = await AdminService.getSchools({
+        search: requestedSearch.trim() || undefined,
+        page: requestedPage,
+        per_page: PER_PAGE,
+      });
 
-      const data = res.schools ?? res;
+      setSchools(
+        (res.items ?? []).map((school) => ({
+          ...school,
+          state: school.state ?? "",
+          phone: school.phone ?? "",
+          email: school.email ?? "",
+        })),
+      );
 
-      setSchools(data);
+      setTotal(res.total ?? 0);
 
-      console.log("Schools loaded:", data);
+      setPage(res.page ?? requestedPage);
+
+      setTotalPages(res.total_pages ?? 1);
     } catch (err) {
       console.error("Failed to load schools:", err);
 
@@ -75,15 +157,47 @@ export default function SchoolsPage() {
     }
   }
 
+  // ==========================================
+  // INITIAL LOAD
+  // ==========================================
+
   useEffect(() => {
-    void Promise.resolve().then(() => loadSchools());
+    void Promise.resolve().then(() => loadSchools(1, ""));
   }, []);
+
+  // ==========================================
+  // SEARCH
+  // ==========================================
+
+  function handleSearch(value: string) {
+    setSearch(value);
+
+    setPage(1);
+
+    void loadSchools(1, value);
+  }
+
+  // ==========================================
+  // PAGE CHANGE
+  // ==========================================
+
+  function goToPage(nextPage: number) {
+    if (nextPage < 1 || nextPage > totalPages || nextPage === page) {
+      return;
+    }
+
+    setPage(nextPage);
+
+    void loadSchools(nextPage, search);
+  }
 
   // ==========================================
   // CREATE SCHOOL
   // ==========================================
 
-  async function createSchool(payload: CreateSchoolPayload) {
+  async function createSchool(
+    payload: CreateSchoolPayload | UpdateSchoolPayload,
+  ) {
     if (creating) {
       return;
     }
@@ -91,12 +205,14 @@ export default function SchoolsPage() {
     try {
       setCreating(true);
 
-      const res = await AdminService.createSchool(payload);
+      const res = await AdminService.createSchool(
+        payload as CreateSchoolPayload,
+      );
 
       toast.success(res.message ?? "School created successfully");
 
       // ========================================
-      // SHOW GENERATED SCHOOL CREDENTIALS
+      // SHOW GENERATED CREDENTIALS
       // ========================================
 
       if (res.credentials) {
@@ -110,7 +226,7 @@ export default function SchoolsPage() {
 
       setOpenCreate(false);
 
-      await loadSchools();
+      await loadSchools(page, search);
     } catch (err: any) {
       console.error("Create school error:", err);
 
@@ -126,7 +242,67 @@ export default function SchoolsPage() {
   }
 
   // ==========================================
-  // ENABLE / DISABLE SCHOOL
+  // EDIT SCHOOL
+  // ==========================================
+
+  function openEditSchool(school: School) {
+    setEditingSchool(school);
+
+    setOpenEdit(true);
+  }
+
+  // ==========================================
+  // UPDATE SCHOOL
+  // ==========================================
+  async function updateSchool(
+    payload: CreateSchoolPayload | UpdateSchoolPayload,
+  ) {
+    if (!editingSchool || updating) {
+      return;
+    }
+
+    try {
+      setUpdating(true);
+
+      const res = await AdminService.updateSchool(
+        editingSchool.id,
+        payload as UpdateSchoolPayload,
+      );
+
+      toast.success(res.message ?? "School updated successfully");
+
+      // ========================================
+      // SHOW UPDATED CREDENTIALS
+      // ========================================
+      if (res.credentials) {
+        setCredentials({
+          username: res.credentials.username,
+          password: res.credentials.password,
+        });
+
+        setOpenCredentials(true);
+      }
+
+      setOpenEdit(false);
+      setEditingSchool(null);
+
+      await loadSchools(page, search);
+    } catch (err: any) {
+      console.error("Update school error:", err);
+
+      const detail =
+        err?.response?.data?.detail ??
+        err?.response?.data?.message ??
+        "Unable to update school.";
+
+      toast.error(detail);
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  // ==========================================
+  // ENABLE / DISABLE
   // ==========================================
 
   async function toggleSchool(school: School) {
@@ -147,7 +323,7 @@ export default function SchoolsPage() {
         toast.success(`${school.name} enabled successfully`);
       }
 
-      await loadSchools();
+      await loadSchools(page, search);
     } catch (err) {
       console.error("Toggle school error:", err);
 
@@ -158,7 +334,7 @@ export default function SchoolsPage() {
   }
 
   // ==========================================
-  // COPY TO CLIPBOARD
+  // COPY
   // ==========================================
 
   async function copy(text: string, label: string) {
@@ -172,6 +348,77 @@ export default function SchoolsPage() {
       toast.error(`Unable to copy ${label.toLowerCase()}`);
     }
   }
+
+  // ==========================================
+  // DOWNLOAD SCHOOLS EXCEL
+  // ==========================================
+
+  async function downloadSchoolsExcel() {
+    if (exporting) {
+      return;
+    }
+
+    try {
+      setExporting(true);
+
+      const blob = await AdminService.downloadSchoolsExcel(
+        search.trim() || undefined,
+      );
+
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+
+      link.href = url;
+
+      link.download = `schools-records-${new Date()
+        .toISOString()
+        .slice(0, 10)}.xlsx`;
+
+      document.body.appendChild(link);
+
+      link.click();
+
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+
+      toast.success("School records downloaded successfully");
+    } catch (err: any) {
+      console.error("Excel export error:", err);
+
+      const detail =
+        err?.response?.data?.detail ??
+        err?.response?.data?.message ??
+        "Unable to download school records.";
+
+      toast.error(detail);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  // ==========================================
+  // PAGE NUMBERS
+  // ==========================================
+
+  function getPageNumbers() {
+    const pages: number[] = [];
+
+    const start = Math.max(1, page - 2);
+
+    const end = Math.min(totalPages, page + 2);
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    return pages;
+  }
+
+  // ==========================================
+  // RENDER
+  // ==========================================
 
   return (
     <>
@@ -190,21 +437,52 @@ export default function SchoolsPage() {
             </p>
           </div>
 
-          {/* CREATE SCHOOL */}
+          {/* ==========================================
+              HEADER ACTIONS
+          ========================================== */}
 
-          <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-            <DialogTrigger asChild>
-              <Button disabled={creating}>Create School</Button>
-            </DialogTrigger>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {/* ==========================================
+                DOWNLOAD EXCEL
+            ========================================== */}
 
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-              <DialogHeader>
-                <DialogTitle>Create New School</DialogTitle>
-              </DialogHeader>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={downloadSchoolsExcel}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
 
-              <SchoolForm onSubmit={createSchool} loading={creating} />
-            </DialogContent>
-          </Dialog>
+              {exporting ? "Downloading..." : "Download Excel"}
+            </Button>
+
+            {/* ==========================================
+                CREATE SCHOOL
+            ========================================== */}
+
+            <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+              <DialogTrigger asChild>
+                <Button disabled={creating}>Create School</Button>
+              </DialogTrigger>
+
+              <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>Create New School</DialogTitle>
+                </DialogHeader>
+
+                <SchoolForm
+                  mode="create"
+                  onSubmit={createSchool}
+                  loading={creating}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* ==========================================
@@ -213,179 +491,313 @@ export default function SchoolsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Registered Schools</CardTitle>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <CardTitle>Registered Schools</CardTitle>
+
+              {/* ==========================================
+                  SEARCH
+              ========================================== */}
+
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+                <Input
+                  value={search}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  placeholder="Search schools..."
+                  className="pl-9"
+                />
+              </div>
+            </div>
           </CardHeader>
 
           <CardContent>
+            {/* ==========================================
+                LOADING
+            ========================================== */}
+
             {loading ? (
               <div className="flex h-40 items-center justify-center text-muted-foreground">
                 Loading schools...
               </div>
             ) : schools.length === 0 ? (
+              /* ==========================================
+                  EMPTY
+              ========================================== */
+
               <div className="flex h-40 items-center justify-center text-muted-foreground">
-                No schools have been created.
+                {search ? "No schools found." : "No schools have been created."}
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-lg border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>School</TableHead>
+              <>
+                {/* ==========================================
+                    TABLE
+                ========================================== */}
 
-                      <TableHead>Admin</TableHead>
+                <div className="overflow-x-auto rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>School</TableHead>
 
-                      <TableHead>Username</TableHead>
+                        <TableHead>Admin</TableHead>
 
-                      <TableHead>Password</TableHead>
+                        <TableHead>Username</TableHead>
 
-                      <TableHead>Status</TableHead>
+                        <TableHead>Password</TableHead>
 
-                      <TableHead className="text-right">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                        <TableHead>Status</TableHead>
 
-                  <TableBody>
-                    {schools.map((school) => {
-                      const admin = school.admin;
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
 
-                      const isToggling = togglingSchoolId === school.id;
+                    <TableBody>
+                      {schools.map((school) => {
+                        const admin = school.admin;
 
-                      return (
-                        <TableRow key={school.id}>
-                          {/* ==================================
-                              SCHOOL
-                          ================================== */}
+                        const isToggling = togglingSchoolId === school.id;
 
-                          <TableCell>
-                            <div>
-                              <p className="font-semibold">{school.name}</p>
+                        return (
+                          <TableRow key={school.id}>
+                            {/* ==========================================
+                                  SCHOOL
+                              ========================================== */}
 
-                              <p className="text-xs text-muted-foreground">
-                                {school.slug}
-                              </p>
-                            </div>
-                          </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="font-semibold">{school.name}</p>
 
-                          {/* ==================================
-                              ADMIN
-                          ================================== */}
+                                <p className="text-xs text-muted-foreground">
+                                  {school.slug}
+                                </p>
+                              </div>
+                            </TableCell>
 
-                          <TableCell>
-                            <div>
-                              <p>
-                                {admin?.first_name ?? "-"}{" "}
-                                {admin?.last_name ?? ""}
-                              </p>
+                            {/* ==========================================
+                                  ADMIN
+                              ========================================== */}
 
-                              <p className="text-xs text-muted-foreground">
-                                {admin?.email ?? "-"}
-                              </p>
-                            </div>
-                          </TableCell>
+                            <TableCell>
+                              <div>
+                                <p>
+                                  {admin?.first_name} {admin?.last_name}
+                                </p>
 
-                          {/* ==================================
-                              USERNAME
-                          ================================== */}
+                                <p className="text-xs text-muted-foreground">
+                                  {admin?.email}
+                                </p>
+                              </div>
+                            </TableCell>
 
-                          <TableCell>
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-mono text-sm">
-                                {admin?.username ?? "-"}
-                              </span>
+                            {/* ==========================================
+                                  USERNAME
+                              ========================================== */}
 
-                              {admin?.username && (
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm">
+                                  {admin?.username ?? "-"}
+                                </span>
+
+                                {admin?.username && (
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() =>
+                                      copy(admin.username!, "Username")
+                                    }
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+
+                            {/* ==========================================
+                                  PASSWORD
+                              ========================================== */}
+
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm">
+                                  {admin?.password ?? "-"}
+                                </span>
+
+                                {admin?.password && (
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() =>
+                                      copy(admin.password!, "Password")
+                                    }
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+
+                            {/* ==========================================
+                                  STATUS
+                              ========================================== */}
+
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  school.is_active ? "default" : "destructive"
+                                }
+                              >
+                                {school.is_active ? "Active" : "Disabled"}
+                              </Badge>
+                            </TableCell>
+
+                            {/* ==========================================
+                                  ACTIONS
+                              ========================================== */}
+
+                            <TableCell>
+                              <div className="flex justify-end gap-2">
+                                {/* EDIT */}
+
                                 <Button
                                   type="button"
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() =>
-                                    copy(admin.username!, "Username")
-                                  }
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openEditSchool(school)}
                                 >
-                                  <Copy className="h-4 w-4" />
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Edit
                                 </Button>
-                              )}
-                            </div>
-                          </TableCell>
 
-                          {/* ==================================
-                              PASSWORD
-                          ================================== */}
+                                {/* ENABLE / DISABLE */}
 
-                          <TableCell>
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-mono text-sm">
-                                {admin?.password ?? "-"}
-                              </span>
-
-                              {admin?.password && (
                                 <Button
                                   type="button"
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() =>
-                                    copy(admin.password!, "Password")
+                                  size="sm"
+                                  disabled={isToggling}
+                                  variant={
+                                    school.is_active ? "destructive" : "default"
                                   }
+                                  onClick={() => toggleSchool(school)}
                                 >
-                                  <Copy className="h-4 w-4" />
+                                  {school.is_active ? (
+                                    <>
+                                      <PowerOff className="mr-2 h-4 w-4" />
+
+                                      {isToggling ? "Disabling..." : "Disable"}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Power className="mr-2 h-4 w-4" />
+
+                                      {isToggling ? "Enabling..." : "Enable"}
+                                    </>
+                                  )}
                                 </Button>
-                              )}
-                            </div>
-                          </TableCell>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
 
-                          {/* ==================================
-                              STATUS
-                          ================================== */}
+                {/* ==========================================
+                    PAGINATION
+                ========================================== */}
 
-                          <TableCell>
-                            <Badge
-                              variant={
-                                school.is_active ? "default" : "destructive"
-                              }
-                            >
-                              {school.is_active ? "Active" : "Disabled"}
-                            </Badge>
-                          </TableCell>
+                <div className="mt-4 flex flex-col gap-4 border-t pt-4 md:flex-row md:items-center md:justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Showing{" "}
+                    <span className="font-medium text-foreground">
+                      {schools.length}
+                    </span>{" "}
+                    of{" "}
+                    <span className="font-medium text-foreground">{total}</span>{" "}
+                    schools
+                  </p>
 
-                          {/* ==================================
-                              ACTION
-                          ================================== */}
+                  <div className="flex items-center gap-1">
+                    {/* PREVIOUS */}
 
-                          <TableCell className="text-right">
-                            <Button
-                              type="button"
-                              size="sm"
-                              disabled={isToggling}
-                              variant={
-                                school.is_active ? "destructive" : "default"
-                              }
-                              onClick={() => toggleSchool(school)}
-                            >
-                              {school.is_active ? (
-                                <>
-                                  <PowerOff className="mr-2 h-4 w-4" />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={page === 1}
+                      onClick={() => goToPage(page - 1)}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
 
-                                  {isToggling ? "Disabling..." : "Disable"}
-                                </>
-                              ) : (
-                                <>
-                                  <Power className="mr-2 h-4 w-4" />
+                    {/* PAGE NUMBERS */}
 
-                                  {isToggling ? "Enabling..." : "Enable"}
-                                </>
-                              )}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                    {getPageNumbers().map((pageNumber) => (
+                      <Button
+                        key={pageNumber}
+                        size="sm"
+                        variant={pageNumber === page ? "default" : "outline"}
+                        onClick={() => goToPage(pageNumber)}
+                      >
+                        {pageNumber}
+                      </Button>
+                    ))}
+
+                    {/* NEXT */}
+
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={page === totalPages}
+                      onClick={() => goToPage(page + 1)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* ==========================================
+          EDIT SCHOOL
+      ========================================== */}
+
+      <Dialog
+        open={openEdit}
+        onOpenChange={(open) => {
+          setOpenEdit(open);
+
+          if (!open) {
+            setEditingSchool(null);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Edit School</DialogTitle>
+          </DialogHeader>
+
+          {editingSchool && (
+            <SchoolForm
+              key={editingSchool.id}
+              mode="edit"
+              school={{
+                ...editingSchool,
+                website: editingSchool.website ?? null,
+                subscription_plan: editingSchool.subscription_plan ?? null,
+              }}
+              onSubmit={updateSchool}
+              loading={updating}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ==========================================
           SCHOOL ADMIN CREDENTIALS
@@ -398,7 +810,7 @@ export default function SchoolsPage() {
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* INFORMATION */}
+            {/* INFO */}
 
             <div className="rounded-xl border bg-green-50 p-4">
               <h3 className="font-semibold text-green-700">
@@ -411,45 +823,41 @@ export default function SchoolsPage() {
               </p>
             </div>
 
-            {/* CREDENTIALS */}
+            {/* USERNAME */}
 
-            <div className="space-y-4">
-              {/* USERNAME */}
+            <div>
+              <label className="text-sm font-medium">Username</label>
 
-              <div>
-                <label className="text-sm font-medium">Username</label>
+              <div className="mt-2 flex items-center justify-between rounded-lg border p-3">
+                <span className="font-mono">{credentials.username}</span>
 
-                <div className="mt-2 flex items-center justify-between rounded-lg border p-3">
-                  <span className="font-mono">{credentials.username}</span>
-
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => copy(credentials.username, "Username")}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => copy(credentials.username, "Username")}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
               </div>
+            </div>
 
-              {/* PASSWORD */}
+            {/* PASSWORD */}
 
-              <div>
-                <label className="text-sm font-medium">Password</label>
+            <div>
+              <label className="text-sm font-medium">Password</label>
 
-                <div className="mt-2 flex items-center justify-between rounded-lg border p-3">
-                  <span className="font-mono">{credentials.password}</span>
+              <div className="mt-2 flex items-center justify-between rounded-lg border p-3">
+                <span className="font-mono">{credentials.password}</span>
 
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => copy(credentials.password, "Password")}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => copy(credentials.password, "Password")}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
               </div>
             </div>
 

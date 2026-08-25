@@ -2,11 +2,11 @@
 
 import { api } from "@/lib/api";
 
-export interface CreateSchoolPayload {
-  // ==========================
-  // SCHOOL
-  // ==========================
+// ==========================================
+// SCHOOL PAYLOADS
+// ==========================================
 
+export interface CreateSchoolPayload {
   school_name: string;
   website?: string;
   phone: string;
@@ -15,9 +15,19 @@ export interface CreateSchoolPayload {
   address: string;
   description?: string;
 
-  // ==========================
-  // SCHOOL ADMIN
-  // ==========================
+  admin_first_name: string;
+  admin_last_name: string;
+  admin_email: string;
+}
+
+export interface UpdateSchoolPayload {
+  school_name: string;
+  website?: string;
+  phone: string;
+  whatsapp_number?: string;
+  state: string;
+  address: string;
+  description?: string;
 
   admin_first_name: string;
   admin_last_name: string;
@@ -25,33 +35,62 @@ export interface CreateSchoolPayload {
 }
 
 // ==========================================
-// ACADEMIC TYPES
+// SCHOOL TYPES
 // ==========================================
 
-export interface SessionPayload {
-  name: string;
-  start_date: string;
-  end_date: string;
+export interface SchoolAdmin {
+  id: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  username: string | null;
+  password?: string | null;
 }
 
-export interface SessionResponse extends SessionPayload {
+export interface School {
   id: string;
-  is_active: boolean;
-}
-
-export interface TermPayload {
   name: string;
-  sort_order?: number;
+  slug: string;
+
+  email: string | null;
+  phone: string | null;
+  state: string | null;
+  website: string | null;
+  whatsapp_number?: string | null;
+  address?: string | null;
+  description?: string | null;
+
+  subscription_plan: string | null;
+  is_active: boolean;
+
+  admin: SchoolAdmin;
 }
 
-export interface TermResponse extends TermPayload {
-  id: string;
-  is_active: boolean;
+// ==========================================
+// PAGINATION
+// ==========================================
+
+export interface GetSchoolsParams {
+  search?: string;
+  page?: number;
+  per_page?: number;
 }
+
+export interface PaginatedSchoolsResponse {
+  items: School[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
+// ==========================================
+// SERVICE
+// ==========================================
 
 export const AdminService = {
   // ==========================================
-  // SCHOOLS
+  // CREATE SCHOOL
   // ==========================================
 
   createSchool: async (payload: CreateSchoolPayload) => {
@@ -60,11 +99,53 @@ export const AdminService = {
     return data;
   },
 
-  getSchools: async () => {
-    const { data } = await api.get("/admin/schools");
+  // ==========================================
+  // GET SCHOOLS
+  // SEARCH + PAGINATION
+  // ==========================================
+
+  getSchools: async (
+    params?: GetSchoolsParams,
+  ): Promise<PaginatedSchoolsResponse> => {
+    const { data } = await api.get("/admin/schools", {
+      params: {
+        search: params?.search || undefined,
+        page: params?.page || 1,
+        per_page: params?.per_page || 10,
+      },
+    });
 
     return data;
   },
+
+  // ==========================================
+  // UPDATE SCHOOL
+  // ==========================================
+
+  updateSchool: async (schoolId: string, payload: UpdateSchoolPayload) => {
+    const { data } = await api.put(`/admin/schools/${schoolId}`, payload);
+
+    return data;
+  },
+
+  // ==========================================
+  // DOWNLOAD SCHOOLS EXCEL
+  // ==========================================
+
+  downloadSchoolsExcel: async (search?: string): Promise<Blob> => {
+    const { data } = await api.get("/admin/schools/export", {
+      params: {
+        search: search || undefined,
+      },
+      responseType: "blob",
+    });
+
+    return data;
+  },
+
+  // ==========================================
+  // DELETE SCHOOL
+  // ==========================================
 
   deleteSchool: async (schoolId: string) => {
     const { data } = await api.delete(`/admin/schools/${schoolId}`);
@@ -72,11 +153,19 @@ export const AdminService = {
     return data;
   },
 
+  // ==========================================
+  // DISABLE SCHOOL
+  // ==========================================
+
   disableSchool: async (schoolId: string) => {
     const { data } = await api.patch(`/admin/schools/${schoolId}/disable`);
 
     return data;
   },
+
+  // ==========================================
+  // ENABLE SCHOOL
+  // ==========================================
 
   enableSchool: async (schoolId: string) => {
     const { data } = await api.patch(`/admin/schools/${schoolId}/enable`);
@@ -161,25 +250,22 @@ export const AdminService = {
   },
 
   // ==========================================
-  // SUPER ADMIN ACADEMIC - SESSIONS
+  // ACADEMIC
   // ==========================================
 
-  getSessions: async (): Promise<SessionResponse[]> => {
+  getSessions: async () => {
     const { data } = await api.get("/super-admin/academic/sessions");
 
     return data;
   },
 
-  createSession: async (payload: SessionPayload): Promise<SessionResponse> => {
+  createSession: async (payload: any) => {
     const { data } = await api.post("/super-admin/academic/sessions", payload);
 
     return data;
   },
 
-  updateSession: async (
-    sessionId: string,
-    payload: SessionPayload,
-  ): Promise<SessionResponse> => {
+  updateSession: async (sessionId: string, payload: any) => {
     const { data } = await api.put(
       `/super-admin/academic/sessions/${sessionId}`,
       payload,
@@ -188,7 +274,7 @@ export const AdminService = {
     return data;
   },
 
-  activateSession: async (sessionId: string): Promise<SessionResponse> => {
+  activateSession: async (sessionId: string) => {
     const { data } = await api.patch(
       `/super-admin/academic/sessions/${sessionId}/activate`,
     );
@@ -196,7 +282,7 @@ export const AdminService = {
     return data;
   },
 
-  deactivateSession: async (sessionId: string): Promise<SessionResponse> => {
+  deactivateSession: async (sessionId: string) => {
     const { data } = await api.patch(
       `/super-admin/academic/sessions/${sessionId}/deactivate`,
     );
@@ -212,26 +298,19 @@ export const AdminService = {
     return data;
   },
 
-  // ==========================================
-  // SUPER ADMIN ACADEMIC - TERMS
-  // ==========================================
-
-  getTerms: async (): Promise<TermResponse[]> => {
+  getTerms: async () => {
     const { data } = await api.get("/super-admin/academic/terms");
 
     return data;
   },
 
-  createTerm: async (payload: TermPayload): Promise<TermResponse> => {
+  createTerm: async (payload: any) => {
     const { data } = await api.post("/super-admin/academic/terms", payload);
 
     return data;
   },
 
-  updateTerm: async (
-    termId: string,
-    payload: TermPayload,
-  ): Promise<TermResponse> => {
+  updateTerm: async (termId: string, payload: any) => {
     const { data } = await api.put(
       `/super-admin/academic/terms/${termId}`,
       payload,
@@ -240,7 +319,7 @@ export const AdminService = {
     return data;
   },
 
-  activateTerm: async (termId: string): Promise<TermResponse> => {
+  activateTerm: async (termId: string) => {
     const { data } = await api.patch(
       `/super-admin/academic/terms/${termId}/activate`,
     );
@@ -248,7 +327,7 @@ export const AdminService = {
     return data;
   },
 
-  deactivateTerm: async (termId: string): Promise<TermResponse> => {
+  deactivateTerm: async (termId: string) => {
     const { data } = await api.patch(
       `/super-admin/academic/terms/${termId}/deactivate`,
     );
