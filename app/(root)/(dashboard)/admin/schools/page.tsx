@@ -144,13 +144,9 @@ export default function SchoolsPage() {
       );
 
       setTotal(res.total ?? 0);
-
-      setPage(res.page ?? requestedPage);
-
       setTotalPages(res.total_pages ?? 1);
     } catch (err) {
       console.error("Failed to load schools:", err);
-
       toast.error("Failed to load schools");
     } finally {
       setLoading(false);
@@ -182,12 +178,19 @@ export default function SchoolsPage() {
   // ==========================================
 
   function goToPage(nextPage: number) {
-    if (nextPage < 1 || nextPage > totalPages || nextPage === page) {
+    if (loading) {
+      return;
+    }
+
+    if (nextPage < 1 || nextPage > totalPages) {
+      return;
+    }
+
+    if (nextPage === page) {
       return;
     }
 
     setPage(nextPage);
-
     void loadSchools(nextPage, search);
   }
 
@@ -723,23 +726,24 @@ export default function SchoolsPage() {
 
                   <div className="flex items-center gap-1">
                     {/* PREVIOUS */}
-
                     <Button
+                      type="button"
                       variant="outline"
                       size="icon"
-                      disabled={page === 1}
+                      disabled={loading || page <= 1}
                       onClick={() => goToPage(page - 1)}
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
 
                     {/* PAGE NUMBERS */}
-
                     {getPageNumbers().map((pageNumber) => (
                       <Button
+                        type="button"
                         key={pageNumber}
                         size="sm"
                         variant={pageNumber === page ? "default" : "outline"}
+                        disabled={loading}
                         onClick={() => goToPage(pageNumber)}
                       >
                         {pageNumber}
@@ -747,11 +751,11 @@ export default function SchoolsPage() {
                     ))}
 
                     {/* NEXT */}
-
                     <Button
+                      type="button"
                       variant="outline"
                       size="icon"
-                      disabled={page === totalPages}
+                      disabled={loading || page >= totalPages}
                       onClick={() => goToPage(page + 1)}
                     >
                       <ChevronRight className="h-4 w-4" />
