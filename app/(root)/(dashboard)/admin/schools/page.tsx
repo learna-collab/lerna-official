@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   ChevronLeft,
@@ -52,7 +52,7 @@ import { Badge } from "@/components/ui/badge";
 
 import { Input } from "@/components/ui/input";
 
-const PER_PAGE = 10;
+const PER_PAGE = 50;
 
 export default function SchoolsPage() {
   // ==========================================
@@ -60,6 +60,7 @@ export default function SchoolsPage() {
   // ==========================================
 
   const [schools, setSchools] = useState<School[]>([]);
+  const pageCache = useRef(new Map<string, Map<number, School[]>>());
 
   const [loading, setLoading] = useState(true);
 
@@ -124,26 +125,69 @@ export default function SchoolsPage() {
   // LOAD SCHOOLS
   // ==========================================
 
-  async function loadSchools(requestedPage = page, requestedSearch = search) {
+  async function loadSchools(
+    requestedPage = page,
+    requestedSearch = search,
+    forceRefresh = false,
+  ) {
+    const searchKey = requestedSearch.trim().toLowerCase();
+
+    // Get/create cache for this search
+    let searchCache = pageCache.current.get(searchKey);
+
+    if (!searchCache) {
+      searchCache = new Map<number, School[]>();
+      pageCache.current.set(searchKey, searchCache);
+    }
+
+    // ==========================================
+    // USE CACHE
+    // ==========================================
+
+    if (!forceRefresh && searchCache.has(requestedPage)) {
+      const cachedSchools = searchCache.get(requestedPage) ?? [];
+
+      setSchools(cachedSchools);
+      setPage(requestedPage);
+
+      return;
+    }
+
+    // ==========================================
+    // FETCH FROM API
+    // ==========================================
+
     try {
       setLoading(true);
 
       const res = await AdminService.getSchools({
-        search: requestedSearch.trim() || undefined,
+        search: searchKey || undefined,
         page: requestedPage,
         per_page: PER_PAGE,
       });
 
-      setSchools(
-        (res.items ?? []).map((school) => ({
-          ...school,
-          state: school.state ?? "",
-          phone: school.phone ?? "",
-          email: school.email ?? "",
-        })),
-      );
+      const fetchedSchools = (res.items ?? []).map((school) => ({
+        ...school,
+        state: school.state ?? "",
+        phone: school.phone ?? "",
+        email: school.email ?? "",
+      }));
+
+      // ==========================================
+      // CACHE PAGE
+      // ==========================================
+
+      searchCache.set(requestedPage, fetchedSchools);
+
+      // ==========================================
+      // DISPLAY
+      // ==========================================
+
+      setSchools(fetchedSchools);
 
       setTotal(res.total ?? 0);
+      setPage(res.page ?? requestedPage);
+
       setTotalPages(res.total_pages ?? 1);
     } catch (err) {
       console.error("Failed to load schools:", err);
@@ -152,10 +196,53 @@ export default function SchoolsPage() {
       setLoading(false);
     }
   }
+  async function prefetchPage(requestedPage: number, requestedSearch = search) {
+    const searchKey = requestedSearch.trim().toLowerCase();
 
+    let searchCache = pageCache.current.get(searchKey);
+
+    if (!searchCache) {
+      searchCache = new Map<number, School[]>();
+      pageCache.current.set(searchKey, searchCache);
+    }
+
+    // Already cached
+    if (searchCache.has(requestedPage)) {
+      return;
+    }
+
+    // Don't prefetch invalid pages
+    if (requestedPage < 1 || requestedPage > totalPages) {
+      return;
+    }
+
+    try {
+      const res = await AdminService.getSchools({
+        search: searchKey || undefined,
+        page: requestedPage,
+        per_page: PER_PAGE,
+      });
+
+      const fetchedSchools = (res.items ?? []).map((school) => ({
+        ...school,
+        state: school.state ?? "",
+        phone: school.phone ?? "",
+        email: school.email ?? "",
+      }));
+
+      searchCache.set(requestedPage, fetchedSchools);
+    } catch (err) {
+      console.error(`Failed to prefetch page ${requestedPage}:`, err);
+    }
+  }
   // ==========================================
   // INITIAL LOAD
   // ==========================================
+  useEffect(() => {
+    if (page < totalPages) {
+      void prefetchPage(page + 1, search);
+    }
+  }, [page, totalPages, search]);
 
   useEffect(() => {
     void Promise.resolve().then(() => loadSchools(1, ""));
@@ -177,7 +264,7 @@ export default function SchoolsPage() {
   // PAGE CHANGE
   // ==========================================
 
-  function goToPage(nextPage: number) {
+  async function goToPage(nextPage: number) {
     if (loading) {
       return;
     }
@@ -190,8 +277,7 @@ export default function SchoolsPage() {
       return;
     }
 
-    setPage(nextPage);
-    void loadSchools(nextPage, search);
+    await loadSchools(nextPage, search);
   }
 
   // ==========================================
