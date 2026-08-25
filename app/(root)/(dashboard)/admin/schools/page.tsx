@@ -803,7 +803,11 @@ export default function SchoolsPage() {
                   <p className="text-sm text-muted-foreground">
                     Showing{" "}
                     <span className="font-medium text-foreground">
-                      {schools.length}
+                      {total === 0 ? 0 : (page - 1) * PER_PAGE + 1}
+                    </span>
+                    {"-"}
+                    <span className="font-medium text-foreground">
+                      {Math.min(page * PER_PAGE, total)}
                     </span>{" "}
                     of{" "}
                     <span className="font-medium text-foreground">{total}</span>{" "}
