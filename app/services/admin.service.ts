@@ -197,7 +197,7 @@ export const AdminService = {
     first_name: string;
     last_name: string;
     email: string;
-    password: string;
+    password?: string;
     school_id: string;
   }) => {
     const { data } = await api.post("/admin/create-school-admin", payload);

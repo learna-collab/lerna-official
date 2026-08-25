@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -22,7 +23,7 @@ type School = {
 };
 
 interface Props {
-  onSuccess?: () => void; // 👈 important
+  onSuccess?: () => void;
 }
 
 export default function CreateSchoolAdminModal({ onSuccess }: Props) {
@@ -34,16 +35,21 @@ export default function CreateSchoolAdminModal({ onSuccess }: Props) {
     first_name: "",
     last_name: "",
     email: "",
-    password: "",
     school_id: "",
   });
+
+  // ==========================================
+  // LOAD SCHOOLS
+  // ==========================================
 
   useEffect(() => {
     async function loadSchools() {
       try {
         const data = await AdminService.getSchools();
-        setSchools(data.schools ?? data);
-      } catch {
+
+        setSchools(data.items ?? []);
+      } catch (err) {
+        console.error("Failed to load schools:", err);
         toast.error("Failed to load schools");
       }
     }
@@ -51,31 +57,69 @@ export default function CreateSchoolAdminModal({ onSuccess }: Props) {
     loadSchools();
   }, []);
 
+  // ==========================================
+  // RESET FORM
+  // ==========================================
+
   function resetForm() {
     setForm({
       first_name: "",
       last_name: "",
       email: "",
-      password: "",
       school_id: "",
     });
   }
 
+  // ==========================================
+  // CREATE SCHOOL ADMIN
+  // ==========================================
+
   async function submit() {
+    if (loading) {
+      return;
+    }
+
+    if (!form.first_name.trim()) {
+      toast.error("First name is required");
+      return;
+    }
+
+    if (!form.last_name.trim()) {
+      toast.error("Last name is required");
+      return;
+    }
+
+    if (!form.email.trim()) {
+      toast.error("Email is required");
+      return;
+    }
+
+    if (!form.school_id) {
+      toast.error("Please select a school");
+      return;
+    }
+
     try {
       setLoading(true);
 
-      await AdminService.createSchoolAdmin(form);
+      const res = await AdminService.createSchoolAdmin(form);
 
-      toast.success("School admin created");
+      toast.success(res.message ?? "School admin created successfully");
 
       setOpen(false);
       resetForm();
 
-      // ✅ IMPORTANT: refresh parent table instead of reload
+      // Refresh parent table
       onSuccess?.();
-    } catch {
-      toast.error("Failed to create admin");
+    } catch (err: any) {
+      console.error("Create school admin error:", err);
+
+      const detail =
+        err?.response?.data?.detail ??
+        err?.response?.data?.message ??
+        "Unable to create school admin.";
+
+      toast.error(detail);
     } finally {
       setLoading(false);
     }
@@ -96,32 +140,46 @@ export default function CreateSchoolAdminModal({ onSuccess }: Props) {
           <Input
             placeholder="First Name"
             value={form.first_name}
-            onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                first_name: e.target.value,
+              })
+            }
           />
 
           <Input
             placeholder="Last Name"
             value={form.last_name}
-            onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                last_name: e.target.value,
+              })
+            }
           />
 
           <Input
+            type="email"
             placeholder="Email"
             value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
-
-          <Input
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                email: e.target.value,
+              })
+            }
           />
 
           <select
-            className="w-full border rounded-md p-3"
+            className="w-full rounded-md border p-3"
             value={form.school_id}
-            onChange={(e) => setForm({ ...form, school_id: e.target.value })}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                school_id: e.target.value,
+              })
+            }
           >
             <option value="">Select School</option>
 
