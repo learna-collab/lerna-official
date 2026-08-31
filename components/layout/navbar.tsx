@@ -6,7 +6,6 @@ import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 
-import { UserButton } from "../auth/userbutton";
 import { useAuthStore } from "@/app/store/auth-store";
 
 export default function Navbar() {
@@ -74,9 +73,6 @@ export default function Navbar() {
     },
   } as const;
 
-  const dashboardLink =
-    user?.role && dashboardLinks[user.role as keyof typeof dashboardLinks];
-
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-brand-orange border-b border-white/10 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -110,9 +106,6 @@ export default function Navbar() {
           <Link href="/" className={linkClass("/")}>
             Home
           </Link>
-          <Link href="/pricing" className={linkClass("/pricing")}>
-            Packages
-          </Link>
 
           <Link href="/about" className={linkClass("/about")}>
             About Us
@@ -139,14 +132,6 @@ export default function Navbar() {
           <div className="px-6 py-6 flex flex-col gap-6">
             <Link href="/" onClick={closeMenu} className={linkClass("/")}>
               Home
-            </Link>
-
-            <Link
-              href="/pricing"
-              onClick={closeMenu}
-              className={linkClass("/pricing")}
-            >
-              Packages
             </Link>
 
             <Link

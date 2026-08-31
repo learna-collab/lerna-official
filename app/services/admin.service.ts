@@ -2,6 +2,24 @@
 
 import { api } from "@/lib/api";
 
+export interface SchoolImportRecord {
+  row: number;
+  source_no?: string | null;
+  school?: string | null;
+  username?: string;
+  password?: string;
+  reason?: string;
+}
+
+export interface SchoolImportResponse {
+  message: string;
+  total_rows: number;
+  imported_count: number;
+  skipped_count: number;
+  imported: SchoolImportRecord[];
+  skipped: SchoolImportRecord[];
+}
+
 // ==========================================
 // SCHOOL PAYLOADS
 // ==========================================
@@ -337,6 +355,22 @@ export const AdminService = {
 
   deleteTerm: async (termId: string) => {
     const { data } = await api.delete(`/super-admin/academic/terms/${termId}`);
+
+    return data;
+  },
+
+  // ==========================================
+  // IMPORT SCHOOLS EXCEL
+  // ==========================================
+  importSchoolsExcel: async (file: File): Promise<SchoolImportResponse> => {
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    const { data } = await api.post<SchoolImportResponse>(
+      "/admin/schools/import",
+      formData,
+    );
 
     return data;
   },

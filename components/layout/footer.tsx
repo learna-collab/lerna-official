@@ -84,10 +84,6 @@ export default function Footer() {
               <Link href="/blogs" className={linkClass("/blogs")}>
                 Blogs
               </Link>
-
-              <Link href="/pricing" className={linkClass("/pricing")}>
-                Packages
-              </Link>
             </div>
           </div>
 
