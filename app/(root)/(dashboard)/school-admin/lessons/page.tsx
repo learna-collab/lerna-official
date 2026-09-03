@@ -4,22 +4,17 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-
 import {
   SchoolAdminLessonService,
   LessonResponse,
 } from "@/app/services/school-admin-lesson.service";
-
 import { SchoolAdminService } from "@/app/services/school-admin.service";
 import { useAcademicPeriod } from "@/app/hooks/use-academic-period";
-
 import { LessonFilters } from "@/components/lessons/LessonFilters";
 import { LessonTable } from "@/components/lessons/LessonTable";
 import { LessonEmptyState } from "@/components/lessons/LessonEmptyState";
-
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
-
 import {
   Select,
   SelectContent,
@@ -32,7 +27,6 @@ export default function SchoolAdminLessonsPage() {
   const [lessons, setLessons] = useState<LessonResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [weekNumber, setWeekNumber] = useState("");
-
   const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
   const [classId, setClassId] = useState("");
 
@@ -47,15 +41,23 @@ export default function SchoolAdminLessonsPage() {
 
   async function loadFilters() {
     try {
+      setLoading(true);
+
       const classData = await SchoolAdminService.getClasses();
 
       setClasses(classData);
 
       if (classData.length > 0) {
         setClassId(classData[0].id);
+      } else {
+        setClassId("");
       }
     } catch {
       toast.error("Failed to load classes.");
+      setClasses([]);
+      setClassId("");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -120,7 +122,6 @@ export default function SchoolAdminLessonsPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
       {/* Header */}
-
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Lesson Notes</h1>
 
@@ -129,37 +130,7 @@ export default function SchoolAdminLessonsPage() {
         </p>
       </div>
 
-      {/* Class Filter */}
-
-      <div className="max-w-sm space-y-2">
-        <Label>Class</Label>
-
-        <Select value={classId} onValueChange={setClassId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select class" />
-          </SelectTrigger>
-
-          <SelectContent>
-            {classes.map((item) => (
-              <SelectItem key={item.id} value={item.id}>
-                {item.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Week Filter */}
-
-      <LessonFilters
-        weekNumber={weekNumber}
-        onWeekNumberChange={setWeekNumber}
-        onApply={handleApplyFilter}
-        onReset={handleResetFilter}
-      />
-
-      {/* Content */}
-
+      {/* Loading */}
       {loading || academicLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-12 w-full" />
@@ -167,23 +138,70 @@ export default function SchoolAdminLessonsPage() {
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
         </div>
-      ) : lessons.length === 0 ? (
-        <LessonEmptyState
-          title="No lessons found"
-          description="No lesson notes are available for the selected filters."
-        />
+      ) : classes.length === 0 ? (
+        /* =========================================================
+           NO ACADEMIC SETUP
+           ========================================================= */
+        <div className="rounded-xl border border-dashed p-8 text-center">
+          <h2 className="text-lg font-semibold">
+            No academic setup for your school
+          </h2>
+
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            Your school does not have any classes configured yet. Go to the
+            Academic Setup panel to set up your classes before viewing lesson
+            notes.
+          </p>
+        </div>
       ) : (
-        <LessonTable
-          lessons={lessons.map((lesson) => ({
-            id: lesson.id,
-            week_number: lesson.week_number,
-            class_name: lesson.class_name,
-            subject_name: lesson.subject_name,
-            topic: lesson.topic,
-            title: lesson.title,
-          }))}
-          basePath="/school-admin/lessons"
-        />
+        <>
+          {/* Class Filter */}
+          <div className="max-w-sm space-y-2">
+            <Label>Class</Label>
+
+            <Select value={classId} onValueChange={setClassId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select class" />
+              </SelectTrigger>
+
+              <SelectContent>
+                {classes.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Week Filter */}
+          <LessonFilters
+            weekNumber={weekNumber}
+            onWeekNumberChange={setWeekNumber}
+            onApply={handleApplyFilter}
+            onReset={handleResetFilter}
+          />
+
+          {/* Content */}
+          {lessons.length === 0 ? (
+            <LessonEmptyState
+              title="No lessons found"
+              description="No lesson notes are available for the selected filters."
+            />
+          ) : (
+            <LessonTable
+              lessons={lessons.map((lesson) => ({
+                id: lesson.id,
+                week_number: lesson.week_number,
+                class_name: lesson.class_name,
+                subject_name: lesson.subject_name,
+                topic: lesson.topic,
+                title: lesson.title,
+              }))}
+              basePath="/school-admin/lessons"
+            />
+          )}
+        </>
       )}
     </div>
   );
