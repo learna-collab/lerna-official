@@ -3,6 +3,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import {
   ChevronLeft,
@@ -53,7 +60,45 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 
 const PER_PAGE = 50;
-
+const NIGERIAN_STATES = [
+  "Abia",
+  "Adamawa",
+  "Akwa Ibom",
+  "Anambra",
+  "Bauchi",
+  "Bayelsa",
+  "Benue",
+  "Borno",
+  "Cross River",
+  "Delta",
+  "Ebonyi",
+  "Edo",
+  "Ekiti",
+  "Enugu",
+  "FCT",
+  "Gombe",
+  "Imo",
+  "Jigawa",
+  "Kaduna",
+  "Kano",
+  "Katsina",
+  "Kebbi",
+  "Kogi",
+  "Kwara",
+  "Lagos",
+  "Nasarawa",
+  "Niger",
+  "Ogun",
+  "Ondo",
+  "Osun",
+  "Oyo",
+  "Plateau",
+  "Rivers",
+  "Sokoto",
+  "Taraba",
+  "Yobe",
+  "Zamfara",
+];
 export default function SchoolsPage() {
   // ==========================================
   // SCHOOLS
@@ -61,6 +106,8 @@ export default function SchoolsPage() {
 
   const [schools, setSchools] = useState<School[]>([]);
   const pageCache = useRef(new Map<string, Map<number, School[]>>());
+  const [stateFilter, setStateFilter] = useState("all");
+  const [locationFilter, setLocationFilter] = useState("");
 
   const [loading, setLoading] = useState(true);
 
@@ -128,40 +175,36 @@ export default function SchoolsPage() {
   async function loadSchools(
     requestedPage = page,
     requestedSearch = search,
+    requestedState = stateFilter,
+    requestedLocation = locationFilter,
     forceRefresh = false,
   ) {
-    const searchKey = requestedSearch.trim().toLowerCase();
+    const filterKey = JSON.stringify({
+      search: requestedSearch.trim().toLowerCase(),
+      state: requestedState,
+      location: requestedLocation.trim().toLowerCase(),
+    });
 
-    // Get/create cache for this search
-    let searchCache = pageCache.current.get(searchKey);
+    let filterCache = pageCache.current.get(filterKey);
 
-    if (!searchCache) {
-      searchCache = new Map<number, School[]>();
-      pageCache.current.set(searchKey, searchCache);
+    if (!filterCache) {
+      filterCache = new Map<number, School[]>();
+      pageCache.current.set(filterKey, filterCache);
     }
 
-    // ==========================================
-    // USE CACHE
-    // ==========================================
-
-    if (!forceRefresh && searchCache.has(requestedPage)) {
-      const cachedSchools = searchCache.get(requestedPage) ?? [];
-
-      setSchools(cachedSchools);
+    if (!forceRefresh && filterCache.has(requestedPage)) {
+      setSchools(filterCache.get(requestedPage) ?? []);
       setPage(requestedPage);
-
       return;
     }
-
-    // ==========================================
-    // FETCH FROM API
-    // ==========================================
 
     try {
       setLoading(true);
 
       const res = await AdminService.getSchools({
-        search: searchKey || undefined,
+        search: requestedSearch.trim() || undefined,
+        state: requestedState === "all" ? undefined : requestedState,
+        location: requestedLocation.trim() || undefined,
         page: requestedPage,
         per_page: PER_PAGE,
       });
@@ -173,21 +216,11 @@ export default function SchoolsPage() {
         email: school.email ?? "",
       }));
 
-      // ==========================================
-      // CACHE PAGE
-      // ==========================================
-
-      searchCache.set(requestedPage, fetchedSchools);
-
-      // ==========================================
-      // DISPLAY
-      // ==========================================
+      filterCache.set(requestedPage, fetchedSchools);
 
       setSchools(fetchedSchools);
-
       setTotal(res.total ?? 0);
       setPage(res.page ?? requestedPage);
-
       setTotalPages(res.total_pages ?? 1);
     } catch (err) {
       console.error("Failed to load schools:", err);
@@ -196,29 +229,33 @@ export default function SchoolsPage() {
       setLoading(false);
     }
   }
-  async function prefetchPage(requestedPage: number, requestedSearch = search) {
-    const searchKey = requestedSearch.trim().toLowerCase();
+  async function prefetchPage(
+    requestedPage: number,
+    requestedSearch = search,
+    requestedState = stateFilter,
+    requestedLocation = locationFilter,
+  ) {
+    const filterKey = JSON.stringify({
+      search: requestedSearch.trim().toLowerCase(),
+      state: requestedState,
+      location: requestedLocation.trim().toLowerCase(),
+    });
 
-    let searchCache = pageCache.current.get(searchKey);
+    let filterCache = pageCache.current.get(filterKey);
 
-    if (!searchCache) {
-      searchCache = new Map<number, School[]>();
-      pageCache.current.set(searchKey, searchCache);
+    if (!filterCache) {
+      filterCache = new Map<number, School[]>();
+      pageCache.current.set(filterKey, filterCache);
     }
 
-    // Already cached
-    if (searchCache.has(requestedPage)) {
-      return;
-    }
-
-    // Don't prefetch invalid pages
-    if (requestedPage < 1 || requestedPage > totalPages) {
-      return;
-    }
+    if (filterCache.has(requestedPage)) return;
+    if (requestedPage < 1 || requestedPage > totalPages) return;
 
     try {
       const res = await AdminService.getSchools({
-        search: searchKey || undefined,
+        search: requestedSearch.trim() || undefined,
+        state: requestedState === "all" ? undefined : requestedState,
+        location: requestedLocation.trim() || undefined,
         page: requestedPage,
         per_page: PER_PAGE,
       });
@@ -230,7 +267,7 @@ export default function SchoolsPage() {
         email: school.email ?? "",
       }));
 
-      searchCache.set(requestedPage, fetchedSchools);
+      filterCache.set(requestedPage, fetchedSchools);
     } catch (err) {
       console.error(`Failed to prefetch page ${requestedPage}:`, err);
     }
@@ -240,9 +277,9 @@ export default function SchoolsPage() {
   // ==========================================
   useEffect(() => {
     if (page < totalPages) {
-      void prefetchPage(page + 1, search);
+      void prefetchPage(page + 1, search, stateFilter, locationFilter);
     }
-  }, [page, totalPages, search]);
+  }, [page, totalPages, search, stateFilter, locationFilter]);
 
   useEffect(() => {
     void Promise.resolve().then(() => loadSchools(1, ""));
@@ -254,10 +291,19 @@ export default function SchoolsPage() {
 
   function handleSearch(value: string) {
     setSearch(value);
-
     setPage(1);
+    void loadSchools(1, value, stateFilter, locationFilter);
+  }
+  function handleStateChange(value: string) {
+    setStateFilter(value);
+    setPage(1);
+    void loadSchools(1, search, value, locationFilter);
+  }
 
-    void loadSchools(1, value);
+  function handleLocationChange(value: string) {
+    setLocationFilter(value);
+    setPage(1);
+    void loadSchools(1, search, stateFilter, value);
   }
 
   // ==========================================
@@ -265,19 +311,11 @@ export default function SchoolsPage() {
   // ==========================================
 
   async function goToPage(nextPage: number) {
-    if (loading) {
-      return;
-    }
+    if (loading) return;
+    if (nextPage < 1 || nextPage > totalPages) return;
+    if (nextPage === page) return;
 
-    if (nextPage < 1 || nextPage > totalPages) {
-      return;
-    }
-
-    if (nextPage === page) {
-      return;
-    }
-
-    await loadSchools(nextPage, search);
+    await loadSchools(nextPage, search, stateFilter, locationFilter);
   }
 
   // ==========================================
@@ -580,14 +618,10 @@ export default function SchoolsPage() {
 
         <Card>
           <CardHeader>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <CardTitle>Registered Schools</CardTitle>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              {/* Search */}
 
-              {/* ==========================================
-                  SEARCH
-              ========================================== */}
-
-              <div className="relative w-full md:w-80">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
                 <Input
@@ -597,6 +631,33 @@ export default function SchoolsPage() {
                   className="pl-9"
                 />
               </div>
+
+              {/* State */}
+
+              <Select value={stateFilter} onValueChange={handleStateChange}>
+                <SelectTrigger className="w-full lg:w-48">
+                  <SelectValue placeholder="State" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value="all">All States</SelectItem>
+
+                  {NIGERIAN_STATES.map((state) => (
+                    <SelectItem key={state} value={state}>
+                      {state}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Location */}
+
+              <Input
+                value={locationFilter}
+                onChange={(e) => handleLocationChange(e.target.value)}
+                placeholder="City or LGA"
+                className="w-full lg:w-52"
+              />
             </div>
           </CardHeader>
 
@@ -628,15 +689,11 @@ export default function SchoolsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>School</TableHead>
-
+                        <TableHead>Phone</TableHead>
                         <TableHead>Admin</TableHead>
-
                         <TableHead>Username</TableHead>
-
                         <TableHead>Password</TableHead>
-
                         <TableHead>Status</TableHead>
-
                         <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -654,12 +711,56 @@ export default function SchoolsPage() {
                               ========================================== */}
 
                             <TableCell>
-                              <div>
+                              <div className="space-y-1">
                                 <p className="font-semibold">{school.name}</p>
 
                                 <p className="text-xs text-muted-foreground">
                                   {school.slug}
                                 </p>
+
+                                <div className="flex flex-wrap gap-1">
+                                  {school.state && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {school.state}
+                                    </Badge>
+                                  )}
+
+                                  {school.address && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      {school.address}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+                            {/* ==========================================
+      PHONE
+========================================== */}
+
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm">
+                                  {school.phone || "-"}
+                                </span>
+
+                                {school.phone && (
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() =>
+                                      copy(school.phone!, "Phone Number")
+                                    }
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                             </TableCell>
 

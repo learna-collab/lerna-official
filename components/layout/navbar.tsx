@@ -110,6 +110,15 @@ export default function Navbar() {
           <Link href="/about" className={linkClass("/about")}>
             About Us
           </Link>
+
+          <Link href="/marketplace" className={linkClass("/marketplace")}>
+            Marketplace
+          </Link>
+
+          <Link href="/payments" className={linkClass("/payments")}>
+            Payments
+          </Link>
+
           <Link href="/blogs" className={linkClass("/blogs")}>
             Blogs
           </Link>
@@ -140,6 +149,22 @@ export default function Navbar() {
               className={linkClass("/about")}
             >
               About Us
+            </Link>
+
+            <Link
+              href="/marketplace"
+              onClick={closeMenu}
+              className={linkClass("/marketplace")}
+            >
+              Marketplace
+            </Link>
+
+            <Link
+              href="/payments"
+              onClick={closeMenu}
+              className={linkClass("/payments")}
+            >
+              Payments
             </Link>
 
             <Link

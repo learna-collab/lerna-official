@@ -90,6 +90,8 @@ export interface School {
 
 export interface GetSchoolsParams {
   search?: string;
+  state?: string;
+  location?: string;
   page?: number;
   per_page?: number;
 }
@@ -128,6 +130,8 @@ export const AdminService = {
     const { data } = await api.get("/admin/schools", {
       params: {
         search: params?.search || undefined,
+        state: params?.state || undefined,
+        location: params?.location || undefined,
         page: params?.page || 1,
         per_page: params?.per_page || 10,
       },
