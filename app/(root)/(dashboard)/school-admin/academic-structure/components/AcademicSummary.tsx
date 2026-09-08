@@ -23,32 +23,31 @@ export function AcademicSummary({
       {/* ======================================================
           TEMPLATE
       ====================================================== */}
-      <Link href="/academic-structure" className="block">
-        <Card className="h-full transition-shadow hover:shadow-md">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Academic Template</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-primary/10 p-3">
-                <GraduationCap className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-semibold">
-                  {configured
-                    ? (templateName ?? "Configured")
-                    : (templateName ?? "No Template Selected")}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {configured
-                    ? "School curriculum configured"
-                    : "Select a curriculum template"}
-                </p>
-              </div>
+
+      <Card className="h-full transition-shadow hover:shadow-md">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Academic Template</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-primary/10 p-3">
+              <GraduationCap className="h-5 w-5 text-primary" />
             </div>
-          </CardContent>
-        </Card>
-      </Link>
+            <div>
+              <p className="font-semibold">
+                {configured
+                  ? (templateName ?? "Configured")
+                  : (templateName ?? "No Template Selected")}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {configured
+                  ? "School curriculum configured"
+                  : "Select a curriculum template"}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* ======================================================
           CLASSES
