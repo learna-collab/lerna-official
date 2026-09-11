@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { api } from "@/lib/api";
+
 /* ===========================================================
  * SCHOOL ACADEMIC PERIOD
  * =========================================================== */
@@ -28,25 +29,30 @@ export interface UpdateSchoolAcademicPeriodRequest {
 }
 
 /* ===========================================================
- * TEMPLATE TYPES
+ * ACADEMIC LEVELS
+ *
+ * These MUST match the backend ClassLevel enum / seeder.
+ *
+ * Backend templates currently use:
+ * NURSERY
+ * PRIMARY
+ * SECONDARY
  * =========================================================== */
 
-export const CLASS_LEVELS = [
-  "PRE_NURSERY",
-  "NURSERY",
-  "PRIMARY",
-  "JUNIOR_SECONDARY",
-  "SENIOR_SECONDARY",
-] as const;
+export const CLASS_LEVELS = ["NURSERY", "PRIMARY", "SECONDARY"] as const;
 
 export type ClassLevel = (typeof CLASS_LEVELS)[number];
 
-export function formatLevel(level: string) {
+export function formatLevel(level: string): string {
   return level
     .toLowerCase()
     .replaceAll("_", " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
+
+/* ===========================================================
+ * TEMPLATE TYPES
+ * =========================================================== */
 
 export interface SubjectTemplate {
   id: string;
@@ -76,34 +82,24 @@ export interface AcademicTemplateResponse {
 
 export interface ConfigureSubjectRequest {
   template_subject_id?: string | null;
-
   name: string;
-
   code?: string | null;
-
   enabled: boolean;
-
   is_custom: boolean;
 }
 
 export interface ConfigureClassRequest {
   template_class_id?: string | null;
-
   name: string;
-
   level: ClassLevel;
-
   sort_order: number;
-
   enabled: boolean;
-
   is_custom: boolean;
-
   subjects: ConfigureSubjectRequest[];
 }
+
 export interface ConfigureAcademicSetupRequest {
   academic_template_id: string;
-
   classes: ConfigureClassRequest[];
 }
 
@@ -113,35 +109,24 @@ export interface ConfigureAcademicSetupRequest {
 
 export interface SchoolSubject {
   id: string;
-
   template_subject_id?: string | null;
-
   name: string;
-
   code?: string | null;
-
   is_custom: boolean;
 }
 
 export interface SchoolClass {
   id: string;
-
   template_class_id?: string | null;
-
   name: string;
-
   level: ClassLevel;
-
   sort_order: number;
-
   is_custom: boolean;
-
   subjects: SchoolSubject[];
 }
 
 export interface SchoolAcademicSetup {
   configured: boolean;
-
   classes: SchoolClass[];
 }
 
@@ -151,13 +136,9 @@ export interface SchoolAcademicSetup {
 
 export interface AcademicSetupSummary {
   classes_created: number;
-
   subjects_created: number;
-
   mappings_created: number;
-
   message: string;
-
   setup: SchoolAcademicSetup;
 }
 
@@ -183,13 +164,11 @@ export interface UpdateClassRequest {
 
 export interface CreateSubjectRequest {
   name: string;
-
   code?: string | null;
 }
 
 export interface UpdateSubjectRequest {
   name: string;
-
   code?: string | null;
 }
 
@@ -210,23 +189,31 @@ export interface AssignSubjectsResponse {
   count: number;
 }
 
+/* ===========================================================
+ * SERVICE
+ * =========================================================== */
+
 export class AcademicSetupService {
-  // ==========================================================
-  // TEMPLATE
-  // ==========================================================
+  /* ==========================================================
+   * TEMPLATE
+   * ========================================================== */
 
   static async getTemplates(): Promise<AcademicTemplateResponse[]> {
-    const response = await api.get("/academic-setup/templates");
+    const response = await api.get<AcademicTemplateResponse[]>(
+      "/academic-setup/templates",
+    );
 
     return response.data;
   }
 
-  // ==========================================================
-  // SCHOOL SETUP
-  // ==========================================================
+  /* ==========================================================
+   * SCHOOL SETUP
+   * ========================================================== */
 
   static async getSchoolSetup(): Promise<SchoolAcademicSetup> {
-    const response = await api.get("/academic-setup/school");
+    const response = await api.get<SchoolAcademicSetup>(
+      "/academic-setup/school",
+    );
 
     return response.data;
   }
@@ -234,7 +221,10 @@ export class AcademicSetupService {
   static async configure(
     payload: ConfigureAcademicSetupRequest,
   ): Promise<AcademicSetupSummary> {
-    const response = await api.post("/academic-setup/configure", payload);
+    const response = await api.post<AcademicSetupSummary>(
+      "/academic-setup/configure",
+      payload,
+    );
 
     return response.data;
   }
@@ -242,17 +232,23 @@ export class AcademicSetupService {
   static async updateSetup(
     payload: ConfigureAcademicSetupRequest,
   ): Promise<AcademicSetupSummary> {
-    const response = await api.put("/academic-setup", payload);
+    const response = await api.put<AcademicSetupSummary>(
+      "/academic-setup",
+      payload,
+    );
 
     return response.data;
   }
 
-  // ==========================================================
-  // CLASS CRUD
-  // ==========================================================
+  /* ==========================================================
+   * CLASS CRUD
+   * ========================================================== */
 
   static async createClass(payload: CreateClassRequest): Promise<SchoolClass> {
-    const response = await api.post("/academic-setup/classes", payload);
+    const response = await api.post<SchoolClass>(
+      "/academic-setup/classes",
+      payload,
+    );
 
     return response.data;
   }
@@ -261,7 +257,7 @@ export class AcademicSetupService {
     classId: string,
     payload: UpdateClassRequest,
   ): Promise<SchoolClass> {
-    const response = await api.patch(
+    const response = await api.patch<SchoolClass>(
       `/academic-setup/classes/${classId}`,
       payload,
     );
@@ -270,19 +266,24 @@ export class AcademicSetupService {
   }
 
   static async deleteClass(classId: string): Promise<DeleteResponse> {
-    const { data } = await api.delete(`/academic-setup/classes/${classId}`);
+    const response = await api.delete<DeleteResponse>(
+      `/academic-setup/classes/${classId}`,
+    );
 
-    return data;
+    return response.data;
   }
 
-  // ==========================================================
-  // SUBJECT CRUD
-  // ==========================================================
+  /* ==========================================================
+   * SUBJECT CRUD
+   * ========================================================== */
 
   static async createSubject(
     payload: CreateSubjectRequest,
   ): Promise<SchoolSubject> {
-    const response = await api.post("/academic-setup/subjects", payload);
+    const response = await api.post<SchoolSubject>(
+      "/academic-setup/subjects",
+      payload,
+    );
 
     return response.data;
   }
@@ -291,7 +292,7 @@ export class AcademicSetupService {
     subjectId: string,
     payload: UpdateSubjectRequest,
   ): Promise<SchoolSubject> {
-    const response = await api.patch(
+    const response = await api.patch<SchoolSubject>(
       `/academic-setup/subjects/${subjectId}`,
       payload,
     );
@@ -300,38 +301,45 @@ export class AcademicSetupService {
   }
 
   static async deleteSubject(subjectId: string): Promise<DeleteResponse> {
-    const { data } = await api.delete(`/academic-setup/subjects/${subjectId}`);
+    const response = await api.delete<DeleteResponse>(
+      `/academic-setup/subjects/${subjectId}`,
+    );
 
-    return data;
+    return response.data;
   }
 
-  // ==========================================================
-  // CLASS SUBJECTS
-  // ==========================================================
+  /* ==========================================================
+   * CLASS SUBJECTS
+   * ========================================================== */
 
   static async assignSubjects(
     classId: string,
     payload: AssignSubjectsRequest,
   ): Promise<AssignSubjectsResponse> {
-    const { data } = await api.put(
+    const response = await api.put<AssignSubjectsResponse>(
       `/academic-setup/classes/${classId}/subjects`,
       payload,
     );
 
-    return data;
+    return response.data;
   }
+
   /* ===========================================================
    * SCHOOL ACADEMIC PERIOD
    * =========================================================== */
 
   static async getAcademicPeriodOptions(): Promise<AcademicPeriodOptionsResponse> {
-    const response = await api.get("/school-admin/academic-period/options");
+    const response = await api.get<AcademicPeriodOptionsResponse>(
+      "/school-admin/academic-period/options",
+    );
 
     return response.data;
   }
 
   static async getCurrentAcademicPeriod(): Promise<SchoolAcademicPeriodResponse | null> {
-    const response = await api.get("/school-admin/academic-period/current");
+    const response = await api.get<SchoolAcademicPeriodResponse | null>(
+      "/school-admin/academic-period/current",
+    );
 
     return response.data;
   }
@@ -339,7 +347,7 @@ export class AcademicSetupService {
   static async updateCurrentAcademicPeriod(
     payload: UpdateSchoolAcademicPeriodRequest,
   ): Promise<SchoolAcademicPeriodResponse> {
-    const response = await api.put(
+    const response = await api.put<SchoolAcademicPeriodResponse>(
       "/school-admin/academic-period/current",
       payload,
     );

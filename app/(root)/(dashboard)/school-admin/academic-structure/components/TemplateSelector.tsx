@@ -3,17 +3,15 @@
 import { BookOpen, CheckCircle2, GraduationCap } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Badge } from "@/components/ui/badge";
 
 import { AcademicTemplateResponse } from "@/app/services/academicSetup.service";
 
 interface TemplateSelectorProps {
   templates: AcademicTemplateResponse[];
-
   selectedTemplateId?: string;
-
   configured: boolean;
-
   onSelect: (template: AcademicTemplateResponse) => void;
 }
 
@@ -33,15 +31,20 @@ export function TemplateSelector({
         <CardTitle>Select Academic Template</CardTitle>
 
         <p className="text-sm text-muted-foreground">
-          Choose the curriculum template that best matches your school. You can
-          later customize classes and subjects.
+          Choose the academic structure that matches your school.
         </p>
       </CardHeader>
 
       <CardContent>
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           {templates.map((template) => {
             const active = template.id === selectedTemplateId;
+
+            const subjectIds = new Set(
+              template.classes.flatMap((cls) =>
+                cls.subjects.map((subject) => subject.id),
+              ),
+            );
 
             return (
               <Card
@@ -54,7 +57,7 @@ export function TemplateSelector({
                 }`}
               >
                 <CardHeader>
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <CardTitle className="text-lg">{template.name}</CardTitle>
 
@@ -66,7 +69,7 @@ export function TemplateSelector({
                     </div>
 
                     {active && (
-                      <CheckCircle2 className="h-6 w-6 text-primary" />
+                      <CheckCircle2 className="h-6 w-6 shrink-0 text-primary" />
                     )}
                   </div>
                 </CardHeader>
@@ -96,11 +99,7 @@ export function TemplateSelector({
 
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <BookOpen className="h-4 w-4" />
-                    {template.classes.reduce(
-                      (count, cls) => count + cls.subjects.length,
-                      0,
-                    )}{" "}
-                    Subjects
+                    {subjectIds.size} Subjects
                   </div>
                 </CardContent>
               </Card>

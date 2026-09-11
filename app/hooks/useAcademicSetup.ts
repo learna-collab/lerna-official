@@ -14,6 +14,7 @@ import {
   ConfigureClassRequest,
   ConfigureSubjectRequest,
 } from "@/app/services/academicSetup.service";
+
 import {
   AcademicDialogType,
   ClassUI,
@@ -30,6 +31,61 @@ const initialDialog: DialogState = {
 };
 
 /* ===========================================================
+ * LEVEL ORDER
+ *
+ * This controls how templates/classes appear in the UI.
+ * It matches the backend's current levels.
+ * =========================================================== */
+
+const LEVEL_ORDER: Record<string, number> = {
+  NURSERY: 1,
+  PRIMARY: 2,
+  SECONDARY: 3,
+};
+
+/* ===========================================================
+ * SORT CLASSES
+ * =========================================================== */
+
+function sortClasses(classes: ClassUI[]): ClassUI[] {
+  return [...classes].sort((a, b) => {
+    const levelA = LEVEL_ORDER[a.level] ?? 999;
+    const levelB = LEVEL_ORDER[b.level] ?? 999;
+
+    if (levelA !== levelB) {
+      return levelA - levelB;
+    }
+
+    if (a.sort_order !== b.sort_order) {
+      return a.sort_order - b.sort_order;
+    }
+
+    return a.name.localeCompare(b.name);
+  });
+}
+
+/* ===========================================================
+ * SORT TEMPLATE CLASSES
+ * =========================================================== */
+
+function sortTemplateClasses(classes: AcademicTemplateResponse["classes"]) {
+  return [...classes].sort((a, b) => {
+    const levelA = LEVEL_ORDER[a.level] ?? 999;
+    const levelB = LEVEL_ORDER[b.level] ?? 999;
+
+    if (levelA !== levelB) {
+      return levelA - levelB;
+    }
+
+    if (a.sort_order !== b.sort_order) {
+      return a.sort_order - b.sort_order;
+    }
+
+    return a.name.localeCompare(b.name);
+  });
+}
+
+/* ===========================================================
  * HOOK
  * =========================================================== */
 
@@ -43,20 +99,33 @@ export function useAcademicSetup() {
   const [draftClasses, setDraftClasses] = useState<ClassUI[]>([]);
 
   const [loading, setLoading] = useState(true);
-
   const [saving, setSaving] = useState(false);
 
   const [dialog, setDialog] = useState<DialogState>(initialDialog);
 
   /* ===========================================================
-   * LOAD DATA
+   * LOAD TEMPLATES
    * =========================================================== */
 
   const loadTemplates = useCallback(async () => {
     const data = await AcademicSetupService.getTemplates();
 
-    setTemplates(data);
+    const sortedTemplates = data.map((template) => ({
+      ...template,
+      classes: sortTemplateClasses(template.classes).map((schoolClass) => ({
+        ...schoolClass,
+        subjects: [...schoolClass.subjects].sort((a, b) =>
+          a.name.localeCompare(b.name),
+        ),
+      })),
+    }));
+
+    setTemplates(sortedTemplates);
   }, []);
+
+  /* ===========================================================
+   * LOAD EXISTING SCHOOL SETUP
+   * =========================================================== */
 
   const loadSetup = useCallback(async () => {
     const data = await AcademicSetupService.getSchoolSetup();
@@ -65,74 +134,157 @@ export function useAcademicSetup() {
 
     if (data.configured) {
       setDraftClasses(normalizeClasses(data.classes));
+    } else {
+      setDraftClasses([]);
     }
   }, []);
+
+  /* ===========================================================
+   * REFRESH
+   * =========================================================== */
 
   const refresh = useCallback(async () => {
     await loadSetup();
   }, [loadSetup]);
 
+  /* ===========================================================
+   * INITIAL LOAD
+   * =========================================================== */
+
   useEffect(() => {
+    let mounted = true;
+
     async function init() {
       try {
         setLoading(true);
 
-        await Promise.all([loadTemplates(), loadSetup()]);
+        const [templateData, setupData] = await Promise.all([
+          AcademicSetupService.getTemplates(),
+          AcademicSetupService.getSchoolSetup(),
+        ]);
+
+        if (!mounted) {
+          return;
+        }
+
+        const sortedTemplates = templateData.map((template) => ({
+          ...template,
+          classes: sortTemplateClasses(template.classes).map((schoolClass) => ({
+            ...schoolClass,
+            subjects: [...schoolClass.subjects].sort((a, b) =>
+              a.name.localeCompare(b.name),
+            ),
+          })),
+        }));
+
+        setTemplates(sortedTemplates);
+        setSetup(setupData);
+
+        if (setupData.configured) {
+          setDraftClasses(normalizeClasses(setupData.classes));
+        } else {
+          setDraftClasses([]);
+        }
       } catch (error: any) {
-        console.error(error);
-        toast.error("Unable to load academic setup.");
+        console.error("Failed to initialize academic setup:", error);
+
+        toast.error(
+          error?.response?.data?.detail ?? "Unable to load academic setup.",
+        );
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
-    init();
-  }, [loadSetup, loadTemplates]);
+    void init();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   /* ===========================================================
    * TEMPLATE SELECTION
+   *
+   * IMPORTANT:
+   *
+   * The selected template's class ID becomes
+   * template_class_id.
+   *
+   * The selected template's subject ID becomes
+   * template_subject_id.
+   *
+   * We do NOT use school IDs here because the school has
+   * not been configured yet.
    * =========================================================== */
 
-  function selectTemplate(template: AcademicTemplateResponse) {
+  const selectTemplate = useCallback((template: AcademicTemplateResponse) => {
     setSelectedTemplateId(template.id);
 
-    const classes: ClassUI[] = template.classes.map((cls) => ({
-      id: cls.id,
+    const classes: ClassUI[] = sortTemplateClasses(template.classes).map(
+      (templateClass) => ({
+        /*
+         * Before configuration, ClassUI.id is the
+         * template class ID.
+         *
+         * buildPayload() will send this as
+         * template_class_id.
+         */
+        id: templateClass.id,
 
-      name: cls.name,
+        name: templateClass.name,
 
-      level: cls.level,
+        level: templateClass.level,
 
-      sort_order: cls.sort_order,
-
-      is_custom: false,
-
-      subjects: cls.subjects.map((subject) => ({
-        id: subject.id,
-
-        name: subject.name,
-
-        code: subject.code,
-
-        enabled: true,
+        sort_order: templateClass.sort_order,
 
         is_custom: false,
-      })),
-    }));
+
+        subjects: [...templateClass.subjects]
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((templateSubject) => ({
+            /*
+             * Before configuration, SubjectUI.id is
+             * the template subject ID.
+             *
+             * buildPayload() sends this as
+             * template_subject_id.
+             */
+            id: templateSubject.id,
+
+            name: templateSubject.name,
+
+            code: templateSubject.code,
+
+            enabled: true,
+
+            is_custom: false,
+          })),
+      }),
+    );
 
     setDraftClasses(classes);
-  }
+  }, []);
 
   /* ===========================================================
-   * SAVE CONFIGURATION
+   * BUILD CONFIGURATION PAYLOAD
    * =========================================================== */
 
-  function buildPayload(): ConfigureAcademicSetupRequest | null {
+  const buildPayload = useCallback((): ConfigureAcademicSetupRequest | null => {
     if (!selectedTemplateId) {
       return null;
     }
 
     const classes: ConfigureClassRequest[] = draftClasses.map((cls) => ({
+      /*
+       * Template class:
+       * cls.id = template class ID.
+       *
+       * Custom class:
+       * no template ID.
+       */
       template_class_id: cls.is_custom ? null : cls.id,
 
       name: cls.name,
@@ -147,11 +299,18 @@ export function useAcademicSetup() {
 
       subjects: cls.subjects.map(
         (subject): ConfigureSubjectRequest => ({
+          /*
+           * Template subject:
+           * subject.id = template subject ID.
+           *
+           * Custom subject:
+           * no template ID.
+           */
           template_subject_id: subject.is_custom ? null : subject.id,
 
           name: subject.name,
 
-          code: subject.code,
+          code: subject.code ?? null,
 
           enabled: subject.enabled,
 
@@ -165,14 +324,43 @@ export function useAcademicSetup() {
 
       classes,
     };
-  }
+  }, [draftClasses, selectedTemplateId]);
 
-  async function saveSetup() {
+  /* ===========================================================
+   * SAVE CONFIGURATION
+   * =========================================================== */
+
+  const saveSetup = useCallback(async () => {
     const payload = buildPayload();
 
     if (!payload) {
       toast.error("Select an academic template first.");
       return;
+    }
+
+    if (!payload.classes.length) {
+      toast.error("The selected academic template has no classes.");
+      return;
+    }
+
+    const enabledClasses = payload.classes.filter((cls) => cls.enabled);
+
+    if (!enabledClasses.length) {
+      toast.error("Enable at least one class before configuring.");
+      return;
+    }
+
+    for (const schoolClass of enabledClasses) {
+      const enabledSubjects = schoolClass.subjects.filter(
+        (subject) => subject.enabled,
+      );
+
+      if (!enabledSubjects.length) {
+        toast.error(
+          `${schoolClass.name} must have at least one enabled subject.`,
+        );
+        return;
+      }
     }
 
     if (setup?.configured) {
@@ -183,19 +371,33 @@ export function useAcademicSetup() {
     try {
       setSaving(true);
 
-      await AcademicSetupService.configure(payload);
+      const response = await AcademicSetupService.configure(payload);
 
-      toast.success("Academic setup completed.");
+      /*
+       * Keep the backend response as the source of
+       * truth after configuration.
+       */
+      setSetup(response.setup);
 
-      await refresh();
+      setDraftClasses(normalizeClasses(response.setup.classes));
+
+      toast.success("Academic setup completed successfully.");
     } catch (error: any) {
-      toast.error(
-        error?.response?.data?.detail ?? "Unable to configure setup.",
-      );
+      console.error("Academic setup configuration failed:", error);
+
+      const detail = error?.response?.data?.detail;
+
+      if (Array.isArray(detail)) {
+        toast.error(
+          detail.map((item: any) => item?.msg ?? "Validation error").join(", "),
+        );
+      } else {
+        toast.error(detail ?? "Unable to configure academic setup.");
+      }
     } finally {
       setSaving(false);
     }
-  }
+  }, [buildPayload, setup]);
 
   /* ===========================================================
    * DIALOG MANAGEMENT
@@ -219,7 +421,11 @@ export function useAcademicSetup() {
    * NORMALIZED OUTPUT
    * =========================================================== */
 
-  const classes = useMemo(() => draftClasses, [draftClasses]);
+  const classes = useMemo(() => sortClasses(draftClasses), [draftClasses]);
+
+  /* ===========================================================
+   * RETURN
+   * =========================================================== */
 
   return {
     templates,
@@ -237,6 +443,8 @@ export function useAcademicSetup() {
     selectTemplate,
 
     saveSetup,
+
+    buildPayload,
 
     refresh,
 
@@ -275,13 +483,19 @@ export function useAcademicSetup() {
         subjectId: subject.id,
       }),
   };
+}
 
-  /* ===========================================================
-   * HELPERS
-   * =========================================================== */
+/* ===========================================================
+ * NORMALIZE SCHOOL SETUP
+ *
+ * After configuration, IDs are SCHOOL IDs.
+ * That is correct because the backend has now created
+ * Class and Subject records for the school.
+ * =========================================================== */
 
-  function normalizeClasses(classes: SchoolClass[]): ClassUI[] {
-    return classes.map((cls) => ({
+function normalizeClasses(classes: SchoolClass[]): ClassUI[] {
+  return sortClasses(
+    classes.map((cls) => ({
       id: cls.id,
 
       name: cls.name,
@@ -292,17 +506,19 @@ export function useAcademicSetup() {
 
       is_custom: cls.is_custom,
 
-      subjects: cls.subjects.map((subject) => ({
-        id: subject.id,
+      subjects: [...cls.subjects]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((subject) => ({
+          id: subject.id,
 
-        name: subject.name,
+          name: subject.name,
 
-        code: subject.code,
+          code: subject.code,
 
-        enabled: true,
+          enabled: true,
 
-        is_custom: subject.is_custom,
-      })),
-    }));
-  }
+          is_custom: subject.is_custom,
+        })),
+    })),
+  );
 }
