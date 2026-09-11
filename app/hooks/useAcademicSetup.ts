@@ -14,6 +14,7 @@ import {
   ConfigureClassRequest,
   ConfigureSubjectRequest,
   ClassLevel,
+  TemplateClassLevel,
 } from "@/app/services/academicSetup.service";
 
 import {
@@ -24,79 +25,105 @@ import {
 } from "../(root)/(dashboard)/school-admin/academic-structure/components/types";
 
 /* ===========================================================
-
-* INITIAL DIALOG STATE
-* =========================================================== */
+ * INITIAL DIALOG STATE
+ * =========================================================== */
 
 const initialDialog: DialogState = {
   type: null,
 };
 
 /* ===========================================================
+ * LEVEL NORMALIZATION
+ * ===========================================================
+ *
+ * Existing seeded database records may contain:
+ *
+ * JSS1 -> SECONDARY
+ * JSS2 -> SECONDARY
+ * JSS3 -> SECONDARY
+ * SS1  -> SECONDARY
+ * SS2  -> SECONDARY
+ * SS3  -> SECONDARY
+ *
+ * The backend does NOT accept SECONDARY.
+ *
+ * Therefore:
+ *
+ * JSS1-JSS3 -> JUNIOR_SECONDARY
+ * SS1-SS3   -> SENIOR_SECONDARY
+ *
+ * This normalization happens BEFORE the data reaches
+ * the configuration payload.
+ * =========================================================== */
 
-* LEGACY LEVEL NORMALIZATION
-*
-* Existing seeded templates may contain:
-*
-* JSS1 -> SECONDARY
-* JSS2 -> SECONDARY
-* JSS3 -> SECONDARY
-* SS1  -> SECONDARY
-* SS2  -> SECONDARY
-* SS3  -> SECONDARY
-*
-* The backend does NOT accept SECONDARY.
-*
-* Therefore, before configuration is submitted:
-*
-* JSS1-JSS3 -> JUNIOR_SECONDARY
-* SS1-SS3   -> SENIOR_SECONDARY
-*
-* Existing template IDs are preserved.
-* =========================================================== */
-
-function normalizeBackendLevel(
-  level: ClassLevel,
+function normalizeClassLevel(
+  level: TemplateClassLevel | string,
   className: string,
-): Exclude<ClassLevel, "SECONDARY"> {
-  if (level !== "SECONDARY") {
-    return level;
+): ClassLevel {
+  const normalizedLevel = level.trim().toUpperCase();
+
+  /*
+   * Legacy secondary value.
+   */
+  if (normalizedLevel === "SECONDARY") {
+    const normalizedName = className.trim().toUpperCase();
+
+    if (/^JSS[1-3]$/.test(normalizedName)) {
+      return "JUNIOR_SECONDARY";
+    }
+
+    if (/^SS[1-3]$/.test(normalizedName)) {
+      return "SENIOR_SECONDARY";
+    }
+
+    throw new Error(
+      `Unable to determine the secondary level for class "${className}".`,
+    );
   }
 
-  if (/^JSS[1-3]$/i.test(className.trim())) {
-    return "JUNIOR_SECONDARY";
-  }
-
-  if (/^SS[1-3]$/i.test(className.trim())) {
-    return "SENIOR_SECONDARY";
+  /*
+   * Already a valid backend level.
+   */
+  if (
+    normalizedLevel === "PRE_NURSERY" ||
+    normalizedLevel === "NURSERY" ||
+    normalizedLevel === "PRIMARY" ||
+    normalizedLevel === "JUNIOR_SECONDARY" ||
+    normalizedLevel === "SENIOR_SECONDARY"
+  ) {
+    return normalizedLevel;
   }
 
   throw new Error(
-    `Unable to determine secondary level for class "${className}".`,
+    `Invalid academic level "${level}" for class "${className}".`,
   );
 }
 
 /* ===========================================================
-
-* HOOK
-* =========================================================== */
+ * HOOK
+ * =========================================================== */
 
 export function useAcademicSetup() {
   const [templates, setTemplates] = useState<AcademicTemplateResponse[]>([]);
+
   const [setup, setSetup] = useState<SchoolAcademicSetup | null>(null);
+
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>();
+
   const [draftClasses, setDraftClasses] = useState<ClassUI[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
   const [dialog, setDialog] = useState<DialogState>(initialDialog);
 
   /* ===========================================================
-
-* LOAD DATA
-* =========================================================== */
+   * LOAD DATA
+   * =========================================================== */
 
   const loadTemplates = useCallback(async () => {
     const data = await AcademicSetupService.getTemplates();
+
     setTemplates(data);
   }, []);
 
@@ -137,36 +164,55 @@ export function useAcademicSetup() {
   }, [loadSetup, loadTemplates]);
 
   /* ===========================================================
-
-* TEMPLATE SELECTION
-* =========================================================== */
+   * TEMPLATE SELECTION
+   * =========================================================== */
 
   function selectTemplate(template: AcademicTemplateResponse) {
     setSelectedTemplateId(template.id);
 
-    const classes: ClassUI[] = template.classes.map((cls) => ({
-      id: cls.id,
-      name: cls.name,
-      level: cls.level,
-      sort_order: cls.sort_order,
-      is_custom: false,
+    try {
+      const classes: ClassUI[] = template.classes.map((cls) => ({
+        id: cls.id,
 
-      subjects: cls.subjects.map((subject) => ({
-        id: subject.id,
-        name: subject.name,
-        code: subject.code,
-        enabled: true,
+        name: cls.name,
+
+        /*
+         * IMPORTANT:
+         *
+         * Legacy SECONDARY is converted immediately.
+         *
+         * So draftClasses NEVER contains SECONDARY.
+         */
+        level: normalizeClassLevel(cls.level, cls.name),
+
+        sort_order: cls.sort_order,
+
         is_custom: false,
-      })),
-    }));
 
-    setDraftClasses(classes);
+        subjects: cls.subjects.map((subject) => ({
+          id: subject.id,
+          name: subject.name,
+          code: subject.code,
+          enabled: true,
+          is_custom: false,
+        })),
+      }));
+
+      setDraftClasses(classes);
+    } catch (error: any) {
+      console.error("Failed to normalize academic template:", error);
+
+      toast.error(
+        error?.message ?? "Unable to load the selected academic template.",
+      );
+
+      setDraftClasses([]);
+    }
   }
 
   /* ===========================================================
-
-* SAVE CONFIGURATION
-* =========================================================== */
+   * SAVE CONFIGURATION
+   * =========================================================== */
 
   function buildPayload(): ConfigureAcademicSetupRequest | null {
     if (!selectedTemplateId) {
@@ -179,14 +225,17 @@ export function useAcademicSetup() {
       name: cls.name,
 
       /*
-       * IMPORTANT:
-       * Convert legacy SECONDARY into the backend's
-       * actual JUNIOR/SENIOR_SECONDARY enum.
+       * draftClasses are already normalized.
+       *
+       * We normalize again here as a safety measure so
+       * SECONDARY can NEVER reach the backend.
        */
-      level: normalizeBackendLevel(cls.level, cls.name),
+      level: normalizeClassLevel(cls.level, cls.name),
 
       sort_order: cls.sort_order,
+
       enabled: true,
+
       is_custom: cls.is_custom,
 
       subjects: cls.subjects.map(
@@ -194,8 +243,11 @@ export function useAcademicSetup() {
           template_subject_id: subject.is_custom ? null : subject.id,
 
           name: subject.name,
+
           code: subject.code,
+
           enabled: subject.enabled,
+
           is_custom: subject.is_custom,
         }),
       ),
@@ -222,21 +274,36 @@ export function useAcademicSetup() {
 
     if (!payload) {
       toast.error("Select an academic template first.");
+
       return;
     }
 
     if (!payload.classes.length) {
       toast.error("The selected academic template has no classes.");
+
       return;
     }
 
     if (setup?.configured) {
       toast.error("Academic setup has already been configured.");
+
       return;
     }
 
     try {
       setSaving(true);
+
+      /*
+       * At this point every class level is guaranteed to be
+       * one of:
+       *
+       * PRE_NURSERY
+       * NURSERY
+       * PRIMARY
+       * JUNIOR_SECONDARY
+       * SENIOR_SECONDARY
+       */
+      console.log("Academic setup payload:", JSON.stringify(payload, null, 2));
 
       await AcademicSetupService.configure(payload);
 
@@ -244,14 +311,19 @@ export function useAcademicSetup() {
 
       await refresh();
     } catch (error: any) {
-      console.log(error?.response?.data);
+      console.error(
+        "Academic setup configuration failed:",
+        error?.response?.data ?? error,
+      );
 
       const detail = error?.response?.data?.detail;
 
       if (Array.isArray(detail)) {
-        toast.error(
-          detail.map((item: any) => item?.msg ?? "Validation error").join(", "),
-        );
+        const messages = detail
+          .map((item: any) => item?.msg ?? "Validation error")
+          .join(", ");
+
+        toast.error(messages);
       } else {
         toast.error(detail ?? "Unable to configure setup.");
       }
@@ -261,9 +333,8 @@ export function useAcademicSetup() {
   }
 
   /* ===========================================================
-
-* DIALOG MANAGEMENT
-* =========================================================== */
+   * DIALOG MANAGEMENT
+   * =========================================================== */
 
   function openDialog(
     type: AcademicDialogType,
@@ -280,9 +351,8 @@ export function useAcademicSetup() {
   }
 
   /* ===========================================================
-
-* NORMALIZED OUTPUT
-* =========================================================== */
+   * NORMALIZED OUTPUT
+   * =========================================================== */
 
   const classes = useMemo(() => draftClasses, [draftClasses]);
 
@@ -331,16 +401,24 @@ export function useAcademicSetup() {
   };
 
   /* ===========================================================
-
-* HELPERS
-* =========================================================== */
+   * HELPERS
+   * =========================================================== */
 
   function normalizeClasses(classes: SchoolClass[]): ClassUI[] {
     return classes.map((cls) => ({
       id: cls.id,
+
       name: cls.name,
-      level: cls.level,
+
+      /*
+       * School setup is already expected to contain backend
+       * values, but normalize defensively in case an old
+       * record still contains SECONDARY.
+       */
+      level: normalizeClassLevel(cls.level, cls.name),
+
       sort_order: cls.sort_order,
+
       is_custom: cls.is_custom,
 
       subjects: cls.subjects.map((subject) => ({
