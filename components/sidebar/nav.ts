@@ -15,6 +15,7 @@ import {
   BarChart3,
   UserCog,
   BookCopy,
+  Store,
 } from "lucide-react";
 
 import { SidebarGroup } from "./types";
@@ -264,6 +265,11 @@ export function getSidebarNavigation(
             label: "Lesson Notes",
             href: "/admin/lessons",
             icon: BookOpen,
+          },
+          {
+            label: "Market Vendors",
+            href: "/admin/marketplace/vendors",
+            icon: Store,
           },
 
           {
