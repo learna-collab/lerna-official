@@ -202,7 +202,9 @@ export interface AssignSubjectsRequest {
 export interface DeleteResponse {
   message: string;
 }
-
+export interface ResetSchoolSetupResponse {
+  message: string;
+}
 export interface AssignSubjectsResponse {
   message: string;
   count: number;
@@ -244,6 +246,14 @@ export class AcademicSetupService {
   ): Promise<AcademicSetupSummary> {
     const response = await api.put("/academic-setup", payload);
 
+    return response.data;
+  }
+
+  static async resetSchoolSetup(): Promise<{
+    message: string;
+    configured: boolean;
+  }> {
+    const response = await api.delete("/academic-setup/reset");
     return response.data;
   }
 

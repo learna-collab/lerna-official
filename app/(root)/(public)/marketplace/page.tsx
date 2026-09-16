@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+
 import Link from "next/link";
+
 import {
   ArrowRight,
   BriefcaseBusiness,
@@ -114,7 +116,6 @@ export default function MarketplacePage() {
         }
 
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
-
         setListings(Array.isArray(listingsData) ? listingsData : []);
       } catch (error) {
         console.error("Failed to load marketplace:", error);
@@ -149,6 +150,10 @@ export default function MarketplacePage() {
       ? featuredListings.slice(0, 8)
       : listings.slice(0, 8);
 
+  const displayCategories = categories.slice(0, 20);
+
+  const hasMoreCategories = categories.length > 20;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero */}
@@ -164,6 +169,7 @@ export default function MarketplacePage() {
                 <span className="text-lg font-bold tracking-tight">
                   LERNA Market
                 </span>
+
                 <span className="text-xs font-medium text-muted-foreground">
                   Education Marketplace
                 </span>
@@ -239,13 +245,15 @@ export default function MarketplacePage() {
             </h2>
           </div>
 
-          <Link
-            href="/marketplace/listings"
-            className="hidden items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:flex"
-          >
-            View listings
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          {hasMoreCategories && (
+            <Link
+              href="/marketplace/categories"
+              className="hidden items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:flex"
+            >
+              See more
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
         </div>
 
         {loading ? (
@@ -266,44 +274,48 @@ export default function MarketplacePage() {
             </p>
           </div>
         ) : (
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {categories.map((category) => (
+          <>
+            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {displayCategories.map((category) => (
+                <Link
+                  key={category.id}
+                  href={`/marketplace/categories/${category.slug}`}
+                  className="group flex min-h-24 items-center justify-between rounded-xl border px-5 py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted/30"
+                >
+                  <div className="flex min-w-0 items-center gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Store className="h-4 w-4" />
+                    </div>
+
+                    <div className="min-w-0">
+                      <h3 className="truncate text-sm font-semibold">
+                        {category.name}
+                      </h3>
+
+                      {category.description && (
+                        <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                          {category.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <ArrowRight className="ml-3 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+                </Link>
+              ))}
+            </div>
+
+            {hasMoreCategories && (
               <Link
-                key={category.id}
-                href={`/marketplace/categories/${category.slug}`}
-                className="group flex min-h-24 items-center justify-between rounded-xl border px-5 py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted/30"
+                href="/marketplace/categories"
+                className="mt-6 flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:hidden"
               >
-                <div className="flex min-w-0 items-center gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Store className="h-4 w-4" />
-                  </div>
-
-                  <div className="min-w-0">
-                    <h3 className="truncate text-sm font-semibold">
-                      {category.name}
-                    </h3>
-
-                    {category.description && (
-                      <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-                        {category.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <ArrowRight className="ml-3 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+                See more
+                <ArrowRight className="h-4 w-4" />
               </Link>
-            ))}
-          </div>
+            )}
+          </>
         )}
-
-        <Link
-          href="/marketplace/listings"
-          className="mt-6 flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground sm:hidden"
-        >
-          View all listings
-          <ArrowRight className="h-4 w-4" />
-        </Link>
       </section>
 
       {/* Listings */}
@@ -362,7 +374,6 @@ export default function MarketplacePage() {
             <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {displayListings.map((listing) => {
                 const meta = listingTypeMeta[listing.listing_type];
-
                 const TypeIcon = meta.icon;
                 const imageUrl = getListingImage(listing);
 

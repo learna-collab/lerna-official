@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
@@ -13,6 +14,8 @@ import {
   Package,
   Plus,
   Store,
+  Upload,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -61,7 +64,7 @@ interface DigitalForm {
 }
 
 interface ImageForm {
-  image_url: string;
+  file: File | null;
   is_primary: boolean;
   sort_order: string;
 }
@@ -94,7 +97,6 @@ const listingTypes: {
 
 export default function NewVendorListingPage() {
   const router = useRouter();
-
   const { user, hydrated, isLoading } = useAuthStore();
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -133,10 +135,12 @@ export default function NewVendorListingPage() {
   });
 
   const [image, setImage] = useState<ImageForm>({
-    image_url: "",
+    file: null,
     is_primary: true,
     sort_order: "0",
   });
+
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   async function loadCategories() {
     try {
@@ -154,7 +158,6 @@ export default function NewVendorListingPage() {
       }
     } catch (error) {
       console.error(error);
-
       toast.error("Unable to load marketplace categories.");
     } finally {
       setLoadingCategories(false);
@@ -179,11 +182,65 @@ export default function NewVendorListingPage() {
     Promise.resolve().then(() => loadCategories());
   }, [hydrated, isLoading, user, router]);
 
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
   function updateForm(field: keyof ListingForm, value: string | boolean) {
     setForm((current) => ({
       ...current,
       [field]: value,
     }));
+  }
+
+  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select a valid image file.");
+      event.target.value = "";
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      toast.error("Image must be 5 MB or smaller.");
+      event.target.value = "";
+      return;
+    }
+
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
+    setImage((current) => ({
+      ...current,
+      file,
+    }));
+
+    setImagePreview(URL.createObjectURL(file));
+  }
+
+  function removeImage() {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
+    setImage((current) => ({
+      ...current,
+      file: null,
+    }));
+
+    setImagePreview(null);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -199,8 +256,18 @@ export default function NewVendorListingPage() {
       return;
     }
 
-    if (!form.price || Number(form.price) < 0) {
+    if (!form.price || Number(form.price) <= 0) {
       toast.error("Please enter a valid price.");
+      return;
+    }
+
+    if (!form.currency.trim() || form.currency.trim().length !== 3) {
+      toast.error("Please enter a valid 3-letter currency code.");
+      return;
+    }
+
+    if (form.listing_type === "DIGITAL" && !digital.file_url.trim()) {
+      toast.error("Please provide the digital product file URL.");
       return;
     }
 
@@ -248,11 +315,6 @@ export default function NewVendorListingPage() {
       }
 
       if (form.listing_type === "DIGITAL") {
-        if (!digital.file_url.trim()) {
-          toast.error("Please provide the digital product file URL.");
-          return;
-        }
-
         await MarketplaceVendorService.addDigitalProduct(listing.id, {
           file_url: digital.file_url.trim(),
           file_type: digital.file_type.trim() || undefined,
@@ -263,11 +325,15 @@ export default function NewVendorListingPage() {
 
       /*
        * Step 3:
-       * Add the image only when one was supplied.
+       * Upload the listing image when one was selected.
+       *
+       * The frontend sends the actual File.
+       * The backend uploads it to Cloudinary and stores
+       * the resulting secure URL.
        */
-      if (image.image_url.trim()) {
+      if (image.file) {
         await MarketplaceVendorService.addListingImage(listing.id, {
-          image_url: image.image_url.trim(),
+          file: image.file,
           is_primary: image.is_primary,
           sort_order: Number(image.sort_order) || 0,
         });
@@ -469,6 +535,7 @@ export default function NewVendorListingPage() {
 
                   <input
                     type="text"
+                    maxLength={3}
                     value={form.currency}
                     onChange={(event) =>
                       updateForm("currency", event.target.value.toUpperCase())
@@ -804,34 +871,87 @@ export default function NewVendorListingPage() {
             </section>
           )}
 
-          {/* Image */}
+          {/* Listing image */}
           <section className="rounded-xl border bg-background p-6 shadow-sm">
             <div className="mb-6">
               <h2 className="text-base font-semibold">Listing image</h2>
 
               <p className="mt-1 text-sm text-muted-foreground">
-                Add the image URL that should represent this listing.
+                Upload an image that represents this listing.
               </p>
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label className="mb-2 block text-sm font-medium">
-                  Image URL
-                </label>
+                <label className="mb-2 block text-sm font-medium">Image</label>
 
-                <input
-                  type="url"
-                  value={image.image_url}
-                  onChange={(event) =>
-                    setImage((current) => ({
-                      ...current,
-                      image_url: event.target.value,
-                    }))
-                  }
-                  placeholder="https://..."
-                  className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                />
+                <div className="rounded-xl border border-dashed p-5">
+                  {!image.file ? (
+                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg px-6 py-10 text-center transition hover:bg-muted/40">
+                      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                        <Upload className="h-5 w-5" />
+                      </div>
+
+                      <span className="text-sm font-semibold">
+                        Choose an image
+                      </span>
+
+                      <span className="mt-1 text-xs text-muted-foreground">
+                        PNG, JPG, JPEG, WEBP — maximum 5 MB
+                      </span>
+
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        onChange={handleImageChange}
+                        className="sr-only"
+                      />
+                    </label>
+                  ) : (
+                    <div className="space-y-4">
+                      {imagePreview && (
+                        <div className="relative overflow-hidden rounded-lg border bg-muted">
+                          <img
+                            src={imagePreview}
+                            alt="Listing image preview"
+                            className="h-64 w-full object-contain"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={removeImage}
+                            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-background/90 shadow-sm transition hover:bg-background"
+                            aria-label="Remove image"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">
+                            {image.file.name}
+                          </p>
+
+                          <p className="text-xs text-muted-foreground">
+                            {(image.file.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+
+                        <label className="shrink-0 cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted">
+                          Change image
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/webp"
+                            onChange={handleImageChange}
+                            className="sr-only"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>

@@ -127,15 +127,22 @@ export class MarketplaceVendorService {
   static async addListingImage(
     listingId: string,
     payload: {
-      image_url: string;
+      file: File;
       is_primary?: boolean;
       sort_order?: number;
     },
   ) {
+    const formData = new FormData();
+
+    formData.append("file", payload.file);
+    formData.append("is_primary", String(payload.is_primary ?? false));
+    formData.append("sort_order", String(payload.sort_order ?? 0));
+
     const res = await api.post(
       `/marketplace/vendor/listings/${listingId}/images`,
-      payload,
+      formData,
     );
+
     return res.data;
   }
 
