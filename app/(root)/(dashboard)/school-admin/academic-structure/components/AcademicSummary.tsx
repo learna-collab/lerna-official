@@ -56,7 +56,7 @@ export function AcademicSummary({
           CLASSES
       ====================================================== */}
 
-      <Link href="/classes" className="block">
+      <Link href="/school-admin/classes" className="block">
         <Card className="h-full transition-shadow hover:shadow-md">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Classes</CardTitle>
@@ -82,7 +82,7 @@ export function AcademicSummary({
           SUBJECTS
       ====================================================== */}
 
-      <Link href="/subjects" className="block">
+      <Link href="/school-admin/subjects" className="block">
         <Card className="h-full transition-shadow hover:shadow-md">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Subjects</CardTitle>
