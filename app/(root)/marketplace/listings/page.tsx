@@ -1,18 +1,24 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-
 import {
   BriefcaseBusiness,
   ChevronDown,
   Download,
+  Minus,
   Package,
+  Plus,
   Search,
+  ShoppingCart,
   SlidersHorizontal,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { MarketplacePublicService } from "@/app/services/public.service";
+import { useCartStore } from "@/app/store/cart-store";
 
 interface Category {
   id: string;
@@ -50,34 +56,25 @@ interface Listing {
 type ListingType = "ALL" | "PHYSICAL" | "SERVICE" | "DIGITAL";
 
 const listingTypeMeta = {
-  PHYSICAL: {
-    label: "Products",
-    icon: Package,
-  },
-  SERVICE: {
-    label: "Services",
-    icon: BriefcaseBusiness,
-  },
-  DIGITAL: {
-    label: "Digital",
-    icon: Download,
-  },
+  PHYSICAL: { label: "Products", icon: Package },
+  SERVICE: { label: "Services", icon: BriefcaseBusiness },
+  DIGITAL: { label: "Digital", icon: Download },
 };
 
 export default function MarketplaceListingsPage() {
   const [listings, setListings] = useState<Listing[]>([]);
-
   const [categories, setCategories] = useState<Category[]>([]);
-
   const [selectedType, setSelectedType] = useState<ListingType>("ALL");
-
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
-
+  const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [search, setSearch] = useState("");
-
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState<string | null>(null);
+  const [addingToCart, setAddingToCart] = useState<string | null>(null);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+
+  const { cart, addItem, loadCart } = useCartStore();
+
+  const cartCount = cart?.total_items ?? 0;
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -92,17 +89,18 @@ export default function MarketplaceListingsPage() {
 
         setListings(listingData);
         setCategories(categoryData);
-      } catch (err) {
-        console.error("Failed to load marketplace listings:", err);
 
+        await loadCart();
+      } catch (err) {
+        console.error(err);
         setError("Unable to load marketplace listings.");
       } finally {
         setLoading(false);
       }
     };
 
-    loadInitialData();
-  }, []);
+    void loadInitialData();
+  }, [loadCart]);
 
   const loadListings = async (type: ListingType, categoryId: string) => {
     try {
@@ -116,8 +114,7 @@ export default function MarketplaceListingsPage() {
 
       setListings(data);
     } catch (err) {
-      console.error("Failed to filter marketplace listings:", err);
-
+      console.error(err);
       setError("Unable to load the selected listings.");
     } finally {
       setLoading(false);
@@ -126,37 +123,90 @@ export default function MarketplaceListingsPage() {
 
   const handleTypeChange = (type: ListingType) => {
     setSelectedType(type);
-
-    loadListings(type, selectedCategory);
+    void loadListings(type, selectedCategory);
   };
 
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
-
-    loadListings(selectedType, categoryId);
+    void loadListings(selectedType, categoryId);
   };
 
   const filteredListings = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();
 
-    if (!searchTerm) {
-      return listings;
-    }
+    if (!searchTerm) return listings;
 
     return listings.filter((listing) => {
       const title = listing.title?.toLowerCase() ?? "";
-
       const description = listing.description?.toLowerCase() ?? "";
-
-      const storeName = listing.vendor?.store_name?.toLowerCase() ?? "";
+      const store = listing.vendor?.store_name?.toLowerCase() ?? "";
 
       return (
         title.includes(searchTerm) ||
         description.includes(searchTerm) ||
-        storeName.includes(searchTerm)
+        store.includes(searchTerm)
       );
     });
   }, [listings, search]);
+
+  const getQuantity = (listingId: string) => quantities[listingId] ?? 1;
+
+  const increaseQuantity = (e: React.MouseEvent, listingId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setQuantities((current) => ({
+      ...current,
+      [listingId]: (current[listingId] ?? 1) + 1,
+    }));
+  };
+
+  const decreaseQuantity = (e: React.MouseEvent, listingId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setQuantities((current) => ({
+      ...current,
+      [listingId]: Math.max(1, (current[listingId] ?? 1) - 1),
+    }));
+  };
+
+  const handleAddToCart = async (e: React.MouseEvent, listing: Listing) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (addingToCart === listing.id) return;
+
+    try {
+      setAddingToCart(listing.id);
+
+      await addItem(listing.id, getQuantity(listing.id));
+
+      toast.success("Added to cart", {
+        description: `${listing.title} has been added to your cart.`,
+      });
+
+      setQuantities((current) => ({
+        ...current,
+        [listing.id]: 1,
+      }));
+    } catch (err: any) {
+      console.error(err);
+
+      toast.error("Unable to add to cart", {
+        description: err?.response?.data?.detail || "Please try again.",
+      });
+    } finally {
+      setAddingToCart(null);
+    }
+  };
+
+  const clearFilters = () => {
+    setSearch("");
+    setSelectedType("ALL");
+    setSelectedCategory("ALL");
+    void loadListings("ALL", "ALL");
+  };
 
   return (
     <main className="min-h-screen bg-background">
@@ -184,7 +234,7 @@ export default function MarketplaceListingsPage() {
               <input
                 type="search"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search products, services, or stores..."
                 className="h-12 w-full rounded-xl border bg-background pl-12 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
@@ -197,61 +247,30 @@ export default function MarketplaceListingsPage() {
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <SlidersHorizontal className="h-5 w-5 text-muted-foreground" />
-
             <span className="text-sm font-medium">Browse by type</span>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => handleTypeChange("ALL")}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                selectedType === "ALL"
-                  ? "bg-primary text-primary-foreground"
-                  : "border bg-background hover:bg-muted"
-              }`}
-            >
-              All
-            </button>
+            {(["ALL", "PHYSICAL", "SERVICE", "DIGITAL"] as ListingType[]).map(
+              (type) => {
+                const Icon = type === "ALL" ? null : listingTypeMeta[type].icon;
 
-            <button
-              type="button"
-              onClick={() => handleTypeChange("PHYSICAL")}
-              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
-                selectedType === "PHYSICAL"
-                  ? "bg-primary text-primary-foreground"
-                  : "border bg-background hover:bg-muted"
-              }`}
-            >
-              <Package className="h-4 w-4" />
-              Products
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleTypeChange("SERVICE")}
-              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
-                selectedType === "SERVICE"
-                  ? "bg-primary text-primary-foreground"
-                  : "border bg-background hover:bg-muted"
-              }`}
-            >
-              <BriefcaseBusiness className="h-4 w-4" />
-              Services
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleTypeChange("DIGITAL")}
-              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
-                selectedType === "DIGITAL"
-                  ? "bg-primary text-primary-foreground"
-                  : "border bg-background hover:bg-muted"
-              }`}
-            >
-              <Download className="h-4 w-4" />
-              Digital
-            </button>
+                return (
+                  <button
+                    key={type}
+                    onClick={() => handleTypeChange(type)}
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
+                      selectedType === type
+                        ? "bg-primary text-primary-foreground"
+                        : "border bg-background hover:bg-muted"
+                    }`}
+                  >
+                    {Icon && <Icon className="h-4 w-4" />}
+                    {type === "ALL" ? "All" : listingTypeMeta[type].label}
+                  </button>
+                );
+              },
+            )}
           </div>
         </div>
       </section>
@@ -272,7 +291,7 @@ export default function MarketplaceListingsPage() {
           <div className="relative">
             <select
               value={selectedCategory}
-              onChange={(event) => handleCategoryChange(event.target.value)}
+              onChange={(e) => handleCategoryChange(e.target.value)}
               className="h-10 min-w-[220px] appearance-none rounded-lg border bg-background px-4 pr-10 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             >
               <option value="ALL">All categories</option>
@@ -302,15 +321,11 @@ export default function MarketplaceListingsPage() {
                 className="overflow-hidden rounded-xl border bg-card"
               >
                 <div className="aspect-square animate-pulse bg-muted" />
-
                 <div className="space-y-3 p-4">
                   <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
-
                   <div className="h-4 w-full animate-pulse rounded bg-muted" />
-
                   <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
-
-                  <div className="h-5 w-1/3 animate-pulse rounded bg-muted" />
+                  <div className="h-10 w-full animate-pulse rounded bg-muted" />
                 </div>
               </div>
             ))}
@@ -329,14 +344,7 @@ export default function MarketplaceListingsPage() {
               selectedType !== "ALL" ||
               selectedCategory !== "ALL") && (
               <button
-                type="button"
-                onClick={() => {
-                  setSearch("");
-                  setSelectedType("ALL");
-                  setSelectedCategory("ALL");
-
-                  loadListings("ALL", "ALL");
-                }}
+                onClick={clearFilters}
                 className="mt-6 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
               >
                 Clear filters
@@ -347,12 +355,14 @@ export default function MarketplaceListingsPage() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredListings.map((listing) => {
               const meta = listingTypeMeta[listing.listing_type];
-
               const Icon = meta.icon;
 
-              const primaryImage =
-                listing.images?.find((image) => image.is_primary) ??
+              const image =
+                listing.images?.find((img) => img.is_primary) ??
                 listing.images?.[0];
+
+              const quantity = getQuantity(listing.id);
+              const isAdding = addingToCart === listing.id;
 
               return (
                 <Link
@@ -361,9 +371,9 @@ export default function MarketplaceListingsPage() {
                   className="group overflow-hidden rounded-xl border bg-card transition-all hover:-translate-y-1 hover:shadow-lg"
                 >
                   <div className="relative aspect-square overflow-hidden bg-muted">
-                    {primaryImage ? (
+                    {image ? (
                       <img
-                        src={primaryImage.image_url}
+                        src={image.image_url}
                         alt={listing.title}
                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
@@ -375,7 +385,6 @@ export default function MarketplaceListingsPage() {
 
                     <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-background/90 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur">
                       <Icon className="h-3.5 w-3.5" />
-
                       {meta.label}
                     </div>
 
@@ -398,18 +407,53 @@ export default function MarketplaceListingsPage() {
                     )}
 
                     <div className="mt-4 flex items-end justify-between gap-3">
-                      <div>
-                        <p className="text-lg font-bold">
-                          {listing.currency}{" "}
-                          {Number(listing.price).toLocaleString()}
-                        </p>
-                      </div>
+                      <p className="text-lg font-bold">
+                        {listing.currency}{" "}
+                        {Number(listing.price).toLocaleString()}
+                      </p>
 
                       {listing.vendor && (
                         <span className="max-w-[120px] truncate text-right text-xs text-muted-foreground">
                           {listing.vendor.store_name}
                         </span>
                       )}
+                    </div>
+
+                    <div
+                      className="mt-4 space-y-2"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                    >
+                      <div className="flex items-center justify-between rounded-lg border bg-background">
+                        <button
+                          onClick={(e) => decreaseQuantity(e, listing.id)}
+                          disabled={quantity <= 1 || isAdding}
+                          className="flex h-9 w-9 items-center justify-center rounded-l-lg hover:bg-muted disabled:opacity-40"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+
+                        <span>{quantity}</span>
+
+                        <button
+                          onClick={(e) => increaseQuantity(e, listing.id)}
+                          disabled={isAdding}
+                          className="flex h-9 w-9 items-center justify-center rounded-r-lg hover:bg-muted disabled:opacity-40"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={(e) => handleAddToCart(e, listing)}
+                        disabled={isAdding}
+                        className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                      >
+                        <ShoppingCart className="h-4 w-4" />
+                        {isAdding ? "Adding..." : "Add to Cart"}
+                      </button>
                     </div>
                   </div>
                 </Link>

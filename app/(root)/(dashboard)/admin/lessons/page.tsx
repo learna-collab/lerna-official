@@ -13,7 +13,7 @@ import {
 } from "@/app/services/super-admin-lesson.service";
 
 import { LessonFilters } from "@/components/lessons/LessonFilters";
-import { LessonTable } from "@/components/lessons/LessonTable";
+import { LessonTable, LessonTableItem } from "@/components/lessons/LessonTable";
 import { LessonEmptyState } from "@/components/lessons/LessonEmptyState";
 
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ export default function SuperAdminLessonsPage() {
   const [classId, setClassId] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [termId, setTermId] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // =========================================================
   // LOAD FILTERS
@@ -95,6 +96,38 @@ export default function SuperAdminLessonsPage() {
       toast.error(error?.response?.data?.detail ?? "Failed to load lessons.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDeleteLesson(lesson: LessonTableItem) {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${lesson.title}"? This action cannot be undone.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingId(lesson.id);
+
+      await SuperAdminLessonService.deleteLesson(lesson.id);
+
+      toast.success("Lesson note deleted successfully.");
+
+      if (weekNumber) {
+        await loadLessons(Number(weekNumber));
+      } else {
+        await loadLessons();
+      }
+    } catch (error: any) {
+      console.error(error);
+
+      toast.error(
+        error?.response?.data?.detail ?? "Failed to delete lesson note.",
+      );
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -249,6 +282,8 @@ export default function SuperAdminLessonsPage() {
             title: lesson.title,
           }))}
           basePath="/admin/lessons"
+          onDelete={handleDeleteLesson}
+          deletingId={deletingId}
         />
       )}
     </div>
