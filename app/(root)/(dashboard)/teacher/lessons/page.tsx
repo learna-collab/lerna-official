@@ -9,7 +9,6 @@ import {
   TeacherLessonService,
   LessonResponse,
 } from "@/app/services/teacher-lesson.service";
-
 import { teacherService } from "@/app/services/teacher.service";
 import { useAcademicPeriod } from "@/app/hooks/use-academic-period";
 
@@ -60,7 +59,8 @@ export default function TeacherLessonsPage() {
       if (classData.length > 0) {
         setClassId(classData[0].id);
       }
-    } catch {
+    } catch (error) {
+      console.error("Failed to load teacher classes:", error);
       toast.error("Failed to load classes.");
     }
   }
@@ -70,7 +70,9 @@ export default function TeacherLessonsPage() {
   // =========================================================
 
   async function loadLessons(selectedWeek?: number) {
-    if (!classId || !sessionId || !termId) return;
+    if (!classId || !sessionId || !termId) {
+      return;
+    }
 
     try {
       setLoading(true);
@@ -85,6 +87,8 @@ export default function TeacherLessonsPage() {
 
       setLessons(data);
     } catch (error: any) {
+      console.error("Failed to load lessons:", error);
+
       toast.error(error?.response?.data?.detail ?? "Failed to load lessons.");
     } finally {
       setLoading(false);
@@ -100,7 +104,7 @@ export default function TeacherLessonsPage() {
   }, []);
 
   // =========================================================
-  // RELOAD WHEN FILTERS CHANGE
+  // RELOAD WHEN CLASS / ACADEMIC PERIOD CHANGES
   // =========================================================
 
   useEffect(() => {
@@ -127,9 +131,15 @@ export default function TeacherLessonsPage() {
     void loadLessons();
   }
 
+  // =========================================================
+  // RENDER
+  // =========================================================
+
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
-      {/* Header */}
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
       <div>
         <h1 className="text-3xl font-bold tracking-tight">My Lessons</h1>
@@ -139,7 +149,9 @@ export default function TeacherLessonsPage() {
         </p>
       </div>
 
-      {/* Class Filter */}
+      {/* =====================================================
+          CLASS FILTER
+      ===================================================== */}
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
@@ -161,7 +173,9 @@ export default function TeacherLessonsPage() {
         </div>
       </div>
 
-      {/* Week Filter */}
+      {/* =====================================================
+          WEEK FILTER
+      ===================================================== */}
 
       <LessonFilters
         weekNumber={weekNumber}
@@ -170,7 +184,9 @@ export default function TeacherLessonsPage() {
         onReset={handleResetFilter}
       />
 
-      {/* Content */}
+      {/* =====================================================
+          CONTENT
+      ===================================================== */}
 
       {loading || academicLoading ? (
         <div className="space-y-3">
@@ -195,6 +211,17 @@ export default function TeacherLessonsPage() {
             title: lesson.title,
           }))}
           basePath="/teacher/lessons"
+          /*
+           * IMPORTANT:
+           *
+           * The detail page needs classId to create/restore
+           * the teacher's ALF session.
+           */
+          getViewHref={(lesson) =>
+            `/teacher/lessons/${lesson.id}?classId=${encodeURIComponent(
+              classId,
+            )}`
+          }
         />
       )}
     </div>

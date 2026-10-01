@@ -168,7 +168,8 @@ export const SchoolAdminService = {
   },
 
   getSchoolTeachers: async () => {
-    const { data } = await api.get(`/school-admin/teachers`);
+    const { data } = await api.get("/school-admin/teachers");
+    console.log(data);
     return data;
   },
 
@@ -251,9 +252,14 @@ export const SchoolAdminService = {
   // =====================
   // SUBJECTS
   // =====================
-  getSubjects: async () => {
+  getSubjects: async (): Promise<SubjectItem[]> => {
     const { data } = await api.get("/school-admin/subjects");
-    return data;
+
+    return Array.isArray(data)
+      ? data
+      : Array.isArray(data?.data)
+        ? data.data
+        : [];
   },
 
   createSubject: async (payload: { name: string }) => {

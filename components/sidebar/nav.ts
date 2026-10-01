@@ -182,6 +182,11 @@ export function getSidebarNavigation(
             href: "/school-admin/attendance",
             icon: ClipboardCheck,
           },
+          {
+            label: "Alf Tracking",
+            href: "/school-admin/alf",
+            icon: BookOpen,
+          },
 
           {
             label: "Results",

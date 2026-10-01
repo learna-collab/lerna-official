@@ -26,6 +26,16 @@ export interface LessonTableItem {
 interface LessonTableProps {
   lessons: LessonTableItem[];
   basePath: string;
+
+  /**
+   * Optional custom URL builder.
+   *
+   * If provided, it controls where the View button navigates.
+   * Otherwise, the existing `${basePath}/${lesson.id}` behavior
+   * is preserved.
+   */
+  getViewHref?: (lesson: LessonTableItem) => string;
+
   onDelete?: (lesson: LessonTableItem) => void;
   deletingId?: string | null;
 }
@@ -33,6 +43,7 @@ interface LessonTableProps {
 export function LessonTable({
   lessons,
   basePath,
+  getViewHref,
   onDelete,
   deletingId = null,
 }: LessonTableProps) {
@@ -56,6 +67,10 @@ export function LessonTable({
         <TableBody>
           {lessons.map((lesson) => {
             const isDeleting = deletingId === lesson.id;
+
+            const viewHref = getViewHref
+              ? getViewHref(lesson)
+              : `${basePath}/${lesson.id}`;
 
             return (
               <TableRow
@@ -86,7 +101,7 @@ export function LessonTable({
                       variant="outline"
                       className="gap-1 rounded-lg"
                     >
-                      <Link href={`${basePath}/${lesson.id}`}>
+                      <Link href={viewHref}>
                         <Eye className="h-4 w-4" />
                         View
                       </Link>
@@ -101,6 +116,7 @@ export function LessonTable({
                       onClick={() => onDelete?.(lesson)}
                     >
                       <Trash2 className="h-4 w-4" />
+
                       {isDeleting ? "Deleting..." : "Delete"}
                     </Button>
                   </div>
