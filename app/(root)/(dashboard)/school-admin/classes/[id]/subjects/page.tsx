@@ -54,8 +54,8 @@ export default function ClassSubjectsPage() {
       );
 
       setAllSubjects(
-        Array.isArray(available?.subjects)
-          ? available.subjects
+        Array.isArray((available as any)?.subjects)
+          ? (available as any).subjects
           : Array.isArray(available)
             ? available
             : [],

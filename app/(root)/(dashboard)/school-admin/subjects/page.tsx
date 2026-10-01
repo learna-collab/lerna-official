@@ -48,11 +48,7 @@ export default function SubjectsPage() {
     try {
       const response = await SchoolAdminService.getSubjects();
 
-      const data = Array.isArray(response?.subjects)
-        ? response.subjects
-        : Array.isArray(response)
-          ? response
-          : [];
+      const data = Array.isArray(response) ? response : [];
 
       setSubjects(data);
     } catch (error) {

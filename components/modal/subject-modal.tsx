@@ -28,7 +28,11 @@ export default function AssignSubjectModal({
   async function load() {
     const data = await SchoolAdminService.getSubjects();
 
-    setSubjects(data.subjects || []);
+    setSubjects(
+      Array.isArray(data)
+        ? data
+        : (data as { subjects?: any[] } | null)?.subjects || [],
+    );
   }
 
   useEffect(() => {
