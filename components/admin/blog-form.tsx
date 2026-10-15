@@ -5,11 +5,20 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
-import { CheckCircle2, ImagePlus, Sparkles, Trash2 } from "lucide-react";
+import {
+  CheckCircle2,
+  FileText,
+  ImagePlus,
+  Loader2,
+  Paperclip,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import { uploadImage } from "./image-upload";
 import RichEditor from "./rich-editor";
-import { BlogService } from "@/app/services/blog.services";
+import { BlogAttachment, BlogService } from "@/app/services/blog.services";
 
 type Props = {
   blog?: {
@@ -23,6 +32,7 @@ type Props = {
     featured: boolean;
     seo_title: string | null;
     seo_description: string | null;
+    attachments?: BlogAttachment[];
   };
 };
 
@@ -46,6 +56,11 @@ export default function BlogForm({ blog }: Props) {
 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [attachments, setAttachments] = useState<BlogAttachment[]>(
+    blog?.attachments ?? [],
+  );
+
+  const [uploadingAttachments, setUploadingAttachments] = useState(false);
 
   const plainText = useMemo(() => {
     return content
@@ -94,8 +109,51 @@ export default function BlogForm({ blog }: Props) {
       setUploading(false);
     }
   };
+  const handleAttachmentUpload = async (files: FileList | null) => {
+    if (!files?.length) return;
+
+    const selectedFiles = Array.from(files);
+
+    setUploadingAttachments(true);
+
+    try {
+      for (const file of selectedFiles) {
+        const result = await BlogService.uploadAttachment(file);
+
+        setAttachments((current) => {
+          if (current.some((item) => item.public_id === result.public_id)) {
+            return current;
+          }
+
+          return [...current, result];
+        });
+      }
+
+      toast.success("Document upload completed");
+    } catch (err: any) {
+      console.error(err);
+
+      toast.error(
+        err?.response?.data?.detail ||
+          err?.message ||
+          "Failed to upload document",
+      );
+    } finally {
+      setUploadingAttachments(false);
+    }
+  };
+
+  const removeAttachment = (publicId: string) => {
+    setAttachments((current) =>
+      current.filter((item) => item.public_id !== publicId),
+    );
+  };
 
   async function handleSubmit() {
+    if (uploadingAttachments) {
+      toast.error("Please wait for document uploads to finish");
+      return;
+    }
     if (!title.trim()) {
       toast.error("Please enter a blog title");
       return;
@@ -138,6 +196,7 @@ export default function BlogForm({ blog }: Props) {
         featured,
         seoTitle: seoTitle.trim(),
         seoDescription: seoDescription.trim(),
+        attachments,
       };
 
       if (blog) {
@@ -350,6 +409,109 @@ export default function BlogForm({ blog }: Props) {
         )}
       </div>
 
+      {/* DOCUMENT ATTACHMENTS */}
+      <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+            <Paperclip className="h-5 w-5 text-brand-blue" />
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Document Attachments
+            </h3>
+            <p className="mt-1 text-sm text-gray-600">
+              Attach downloadable PDFs, PowerPoint presentations, Word
+              documents, spreadsheets, text files, or ZIP files. Maximum 20 MB
+              per file.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 p-6">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <FileText className="h-9 w-9 text-gray-500" />
+
+            <div>
+              <p className="font-medium text-gray-800">
+                Upload supporting documents
+              </p>
+              <p className="text-sm text-gray-500">
+                PDF, PPT, PPTX, DOC, DOCX, XLS, XLSX, CSV, TXT, ZIP
+              </p>
+            </div>
+
+            <input
+              type="file"
+              multiple
+              accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip"
+              disabled={uploadingAttachments || loading}
+              onChange={async (event) => {
+                await handleAttachmentUpload(event.target.files);
+                event.target.value = "";
+              }}
+              className="w-full max-w-sm rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-blue file:px-4 file:py-2 file:font-medium file:text-white disabled:opacity-50"
+            />
+          </div>
+        </div>
+
+        {uploadingAttachments && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Uploading document...
+          </div>
+        )}
+
+        <div className="mt-5 space-y-3">
+          {attachments.map((attachment) => (
+            <div
+              key={attachment.public_id}
+              className="flex items-center gap-3 rounded-xl border border-gray-200 p-4"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+                <FileText className="h-5 w-5 text-gray-600" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-gray-900">
+                  {attachment.filename}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {attachment.file_size
+                    ? `${(attachment.file_size / (1024 * 1024)).toFixed(2)} MB`
+                    : "Document"}
+                </p>
+              </div>
+
+              <a
+                href={attachment.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-brand-blue hover:underline"
+              >
+                View
+              </a>
+
+              <button
+                type="button"
+                onClick={() => removeAttachment(attachment.public_id)}
+                disabled={uploadingAttachments || loading}
+                aria-label={`Remove ${attachment.filename}`}
+                className="rounded-lg p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+
+          {attachments.length === 0 && !uploadingAttachments && (
+            <p className="rounded-xl bg-gray-50 p-4 text-center text-sm text-gray-500">
+              No documents attached yet.
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* CONTENT */}
       <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="mb-5 flex items-center justify-between">
@@ -503,7 +665,7 @@ export default function BlogForm({ blog }: Props) {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={loading || uploading}
+              disabled={loading || uploading || uploadingAttachments}
               className="inline-flex items-center justify-center rounded-xl bg-brand-blue px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-blue/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading

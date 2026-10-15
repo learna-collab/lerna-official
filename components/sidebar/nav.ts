@@ -16,6 +16,7 @@ import {
   UserCog,
   BookCopy,
   Store,
+  Wallet,
 } from "lucide-react";
 
 import { SidebarGroup } from "./types";
@@ -181,6 +182,11 @@ export function getSidebarNavigation(
             label: "Attendance",
             href: "/school-admin/attendance",
             icon: ClipboardCheck,
+          },
+          {
+            label: "Manage Finance",
+            href: "/school-admin/finance",
+            icon: Wallet,
           },
           {
             label: "Alf Tracking",
